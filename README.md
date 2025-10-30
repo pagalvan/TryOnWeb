@@ -27,7 +27,7 @@ npm run dev
       <a href="https://github.com/AnyeCOsp23">Anyelin Ospino</a><br />
     </td>
     <td align="center">
-      <img src="https://avatars.githubusercontent.com/u/148993052?v=4" width="100"/><br />
+      <img src="https://avatars.githubusercontent.com/u/199418886?v=4" width="100"/><br />
       <a href="https://github.com/hx4m099">Hector Lopez</a><br />
     </td>
 
