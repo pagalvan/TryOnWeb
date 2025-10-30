@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/pagalvan/TryOnWeb/Frontend/public/logo.png" width="150" alt="Logo"/>
+  <img src="https://github.com/pagalvan/TryOnWeb/blob/main/Frontend/public/logo.png" width="150" alt="Logo"/>
 </p>
 
 # TryOnWeb
