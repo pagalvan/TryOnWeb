@@ -48,7 +48,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 py-2">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href={userRole === "admin" ? "/dashboard" : "/"} className="flex items-center">
+          <Link href={userRole === "admin" ? "/dashboard" : "/"} className="flex items-center" prefetch={true}>
             <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain" priority />
           </Link>
 
@@ -58,6 +58,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={true}
                 className={`text-sm transition-colors ${
                   pathname === link.href ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -82,7 +83,7 @@ export function Navbar() {
             )}
 
             {!userRole && (
-              <Link href="/login">
+              <Link href="/login" prefetch={true}>
                 <Button className="bg-primary text-primary-foreground hover:bg-primary/90">Acceder</Button>
               </Link>
             )}
@@ -105,6 +106,7 @@ export function Navbar() {
                       <Link
                         key={link.href}
                         href={link.href}
+                        prefetch={true}
                         onClick={() => setIsOpen(false)}
                         className={`text-sm transition-colors ${
                           pathname === link.href
@@ -139,7 +141,7 @@ export function Navbar() {
                     </div>
                   ) : (
                     <div className="border-t border-border pt-6 mt-4">
-                      <Link href="/login" onClick={() => setIsOpen(false)}>
+                      <Link href="/login" onClick={() => setIsOpen(false)} prefetch={true}>
                         <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                           Acceder
                         </Button>
