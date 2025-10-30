@@ -22,7 +22,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
 
-    // Simular autenticación con credenciales hardcodeadas
+    // Simular autenticación con credenciales 
     if (email === "admin@tryonweb.com" && password === "admin123") {
       localStorage.setItem("userRole", "admin")
       router.push("/dashboard")
@@ -102,14 +102,13 @@ export default function LoginPage() {
               <span className="font-medium">Admin:</span> admin@tryonweb.com / admin123
             </p>
             <p>
-              <span className="font-medium">Cliente:</span> cliente@tryonweb.com / cliente123
+              <span className="font-medium">Cliente:</span> cliente@tryonweb.com / 1234
             </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>Prototipo educativo - Universidad 2025</p>
         </div>
       </Card>
     </div>
