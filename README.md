@@ -2,7 +2,7 @@
   <img src="https://github.com/pagalvan/TryOnWeb/blob/main/Frontend/public/logo.png" width="150" alt="Logo"/>
 </p>
 
-# TryOnWeb
+
 Sistema de gestión de inventario con probador virtual
 
 
