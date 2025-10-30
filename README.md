@@ -14,3 +14,23 @@ cd Frontend
 npm install
 npm run dev
 ```
+
+## Contributors
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/70029149?v=4" width="100"/><br />
+      <a href="https://github.com/pagalvan">Pablo Galván</a><br />
+    </td>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/202590753?v=4" width="100"/><br />
+      <a href="https://github.com/AnyeCOsp23">Anyelin Ospino</a><br />
+    </td>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/148993052?v=4" width="100"/><br />
+      <a href="https://github.com/hx4m099">Hector Lopez</a><br />
+    </td>
+
+  </tr>
+</table>
+
