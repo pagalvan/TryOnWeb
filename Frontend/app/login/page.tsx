@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -94,22 +95,18 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Credenciales de prueba */}
-        <div className="mt-8 p-4 bg-muted rounded-lg">
-          <p className="text-xs text-muted-foreground mb-2 font-semibold">Credenciales de prueba:</p>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>
-              <span className="font-medium">Admin:</span> admin@tryonweb.com / admin123
-            </p>
-            <p>
-              <span className="font-medium">Cliente:</span> cliente@tryonweb.com / 1234
-            </p>
-          </div>
+        {/* Mensaje para registro */}
+        <div className="mt-6 text-center text-sm">
+          <p className="text-muted-foreground">
+            No tienes cuenta?{' '}
+            <Link href="/registro" className="font-semibold underline text-foreground">
+              Registrate
+            </Link>
+          </p>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-        </div>
+        <div className="text-center mt-4 text-sm text-muted-foreground"></div>
       </Card>
     </div>
   )
