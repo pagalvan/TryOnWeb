@@ -1,37 +1,33 @@
-TryOnWeb - Supabase SQL scripts
+# TryOnWeb - Supabase Database Scripts
 
-Purpose
-- Provide a structured set of SQL files ready to apply to a Supabase (Postgres) project.
-- Files included:
-  - schema.sql     -- DDL for tables used by the frontend (productos, categorias, clientes, ventas, creditos, abonos, inventario, ar_assets, settings, reportes)
-  - functions.sql  -- PL/pgSQL functions and triggers (validations, update deuda, abono handling, strikes updater)
-  - seed.sql       -- Optional sample data for local/dev testing
-  - policies.sql   -- Example RLS policies and notes for Supabase
+Scripts alineados con los módulos del proyecto (inventario, probador virtual, gestión de usuarios, recomendaciones y reportes). Todos los archivos están diseñados para ejecutarse en Supabase/PostgreSQL.
 
-How to use
-1) Open your Supabase project and go to the SQL editor (or use psql).
-2) Run files in order:
-   - schema.sql
-   - functions.sql
-   - policies.sql (review and adjust policies to your auth model)
-   - seed.sql (optional)
+## Archivos
 
-If using psql locally:
-psql -h <host> -p <port> -U <user> -d <db> -f schema.sql
-psql -f functions.sql
-psql -f policies.sql
-psql -f seed.sql
+| Archivo | Descripción |
+| --- | --- |
+| `01_create_tables.sql` | Esquema principal con tablas, llaves foráneas e índices. Incluye `profiles`, `prendas`, `lens_assets`, inventario, probador virtual, recomendaciones y reportes. |
+| `02_seed_data.sql` | Datos de referencia mínimos (categorías, una prenda, asset lens e inventario). Útil para pruebas iniciales. |
+| `03_row_level_security.sql` | Función helper + activación de RLS y policies basadas en `auth.uid()` y el rol almacenado en `profiles`. |
 
-Notes / Differences vs Oracle example
-- This is Postgres (Supabase) SQL, not Oracle PL/SQL. Sequences/IDENTITY handled via UUIDs (gen_random_uuid()).
-- Scheduling the `actualizar_strikes_vencidos` function is not done here; use Supabase Scheduled Functions or pg_cron.
-- RLS policies must be adapted to how you map auth users to the `users` table. Review `policies.sql` before enabling RLS.
+## Orden sugerido de ejecución
 
-Recommended next steps
-- Add an `auth_id` (uuid) column to `users` or `clientes` if you want to map Supabase auth users directly.
-- Add more granular policies per table (ventas, creditos, abonos).
-- Add migrations integration (pgm or freight) for production deployments.
+1. `01_create_tables.sql`
+2. `02_seed_data.sql` (opcional)
+3. `03_row_level_security.sql`
 
-If quieres, puedo:
-- Añadir columnas `auth_id` y ejemplos de políticas para que los usuarios autenticados solo vean sus propios clientes/ventas.
-- Generar migraciones SQL separadas (timestamped) para integrarlas en un CI/CD.
+Puedes ejecutar cada archivo desde la consola SQL de Supabase o mediante `psql`:
+
+```sql
+\i DataBase/supabase/01_create_tables.sql;
+\i DataBase/supabase/02_seed_data.sql;
+\i DataBase/supabase/03_row_level_security.sql;
+```
+
+## Notas importantes
+
+- `profiles.id` debe coincidir con `auth.users.id`. Asegúrate de insertar un registro en `profiles` tras el signup (mediante trigger o edge function).
+- Todas las tablas usan UUID (`gen_random_uuid()`), por lo que es necesario que la extensión `pgcrypto` esté habilitada (el script ya la crea si no existe).
+- No se incluye lógica de ventas. El inventario se usa para control interno y el probador virtual se apoya en `lens_assets` y `tryon_sessions`.
+- Ajusta las policies según los requerimientos de tu app (por ejemplo, permitir que clientes lean catálogos completos aunque no estén autenticados).
+- Para métricas (prendas más consultadas) usa la tabla `product_events` o genera reportes periódicos almacenados en `reportes`.
