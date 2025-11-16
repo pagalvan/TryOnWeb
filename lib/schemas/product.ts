@@ -1,0 +1,36 @@
+import { z } from "zod"
+
+export const productPayloadSchema = z.object({
+  nombre: z.string().min(2, "El nombre es obligatorio"),
+  sku: z.string().max(64).optional().or(z.literal("")),
+  categoria_id: z.string().uuid().optional().or(z.literal("")),
+  valor_unitario: z
+    .number({ invalid_type_error: "El precio debe ser numérico" })
+    .min(0, "El precio debe ser positivo")
+    .nullable()
+    .optional(),
+  descripcion: z.string().optional().or(z.literal("")),
+  estado: z.enum(["disponible", "reservada", "inactiva"]),
+  destacado: z.boolean().default(false),
+  metadata: z
+    .object({
+      image_url: z.string().url("URL de imagen inválida").optional(),
+      gallery: z.array(z.string().url()).optional(),
+    })
+    .partial()
+    .optional(),
+  stockInicial: z.number().int().min(0).default(0),
+  ubicacion: z.string().min(2).default("Bodega Principal"),
+})
+
+export const productUpdateSchema = productPayloadSchema.partial().extend({
+  nombre: z.string().min(2).optional(),
+})
+
+export const stockSchema = z.object({
+  itemId: z.string().uuid().optional().or(z.literal("")),
+  ubicacion: z.string().min(2, "La ubicación es obligatoria"),
+  cantidad: z.number().int().min(0, "La cantidad debe ser positiva"),
+  cantidad_minima: z.number().int().min(0).default(0),
+  estado: z.enum(["ok", "bajo", "sin_stock", "bloqueado"]),
+})
