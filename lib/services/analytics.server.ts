@@ -64,6 +64,15 @@ type ProductRecord = {
   categoria_id: string | null
 }
 
+type MaybeArray<T> = T | T[]
+
+type InventoryProductRecord = {
+  id: string
+  nombre: string
+  sku: string | null
+  valor_unitario: number | string | null
+}
+
 type InventoryRecord = {
   id: string
   prenda_id: string
@@ -72,12 +81,7 @@ type InventoryRecord = {
   estado: string | null
   ubicacion: string
   updated_at: string | null
-  prendas: {
-    id: string
-    nombre: string
-    sku: string | null
-    valor_unitario: number | string | null
-  } | null
+  prendas: MaybeArray<InventoryProductRecord> | null
 }
 
 type CategoryRecord = {
@@ -93,16 +97,18 @@ type TryOnItemRecord = {
   duracion_seg: number | null
 }
 
+type ProductSummaryRecord = {
+  id: string
+  nombre: string
+  sku: string | null
+}
+
 type ProductEventRecord = {
   id: string
   prenda_id: string | null
   event_type: "view" | "tryon" | "favorite" | "share"
   created_at: string
-  prendas: {
-    id: string
-    nombre: string
-    sku: string | null
-  } | null
+  prendas: MaybeArray<ProductSummaryRecord> | null
 }
 
 type InventoryMovementRecord = {
@@ -112,14 +118,10 @@ type InventoryMovementRecord = {
   motivo: string | null
   referencia: string | null
   created_at: string
-  inventario_items: {
+  inventario_items: MaybeArray<{
     ubicacion: string | null
-    prendas: {
-      id: string
-      nombre: string
-      sku: string | null
-    } | null
-  } | null
+    prendas: MaybeArray<ProductSummaryRecord> | null
+  }> | null
 }
 
 type ReportRecord = {
@@ -141,6 +143,13 @@ type RawAnalyticsData = {
   reports: ReportRecord[]
 }
 
+const firstItem = <T,>(value: MaybeArray<T> | null | undefined): T | null => {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+  return value ?? null
+}
+
 const parseCurrency = (value: number | string | null | undefined) => {
   if (value === null || value === undefined) return 0
   if (typeof value === "number") return value
@@ -152,20 +161,21 @@ const computeLowStockProducts = (inventory: InventoryRecord[]): LowStockProduct[
   const map = new Map<string, LowStockProduct & { hasNonOk: boolean }>()
 
   for (const item of inventory) {
-    if (!item.prendas) {
+    const product = firstItem(item.prendas)
+    if (!product) {
       continue
     }
 
     const quantity = item.cantidad ?? 0
     const minimum = item.cantidad_minima ?? 0
-    const productId = item.prendas.id
+    const productId = product.id
 
     let entry = map.get(productId)
     if (!entry) {
       entry = {
         productId,
-        productName: item.prendas.nombre,
-        sku: item.prendas.sku,
+        productName: product.nombre,
+        sku: product.sku,
         totalStock: 0,
         minimumStock: 0,
         status: "warning",
@@ -241,13 +251,14 @@ const computeTopProducts = (events: ProductEventRecord[]): TopProductStat[] => {
   const stats = new Map<string, TopProductStat>()
 
   for (const event of events) {
-    const productId = event.prenda_id ?? event.prendas?.id
+    const product = firstItem(event.prendas)
+    const productId = event.prenda_id ?? product?.id
     if (!productId) continue
 
     const entry = stats.get(productId) ?? {
       productId,
-      productName: event.prendas?.nombre ?? "Producto sin nombre",
-      sku: event.prendas?.sku ?? null,
+      productName: product?.nombre ?? "Producto sin nombre",
+      sku: product?.sku ?? null,
       views: 0,
       tryons: 0,
       favorites: 0,
@@ -300,18 +311,23 @@ const computeCategoryDistribution = (categories: CategoryRecord[]): CategoryDist
 }
 
 const mapMovements = (records: InventoryMovementRecord[]): InventoryMovement[] =>
-  records.map((movement) => ({
-    id: movement.id,
-    type: movement.tipo,
-    quantity: movement.cantidad,
-    motive: movement.motivo,
-    reference: movement.referencia,
-    productId: movement.inventario_items?.prendas?.id ?? null,
-    productName: movement.inventario_items?.prendas?.nombre ?? null,
-    sku: movement.inventario_items?.prendas?.sku ?? null,
-    location: movement.inventario_items?.ubicacion ?? null,
-    timestamp: movement.created_at,
-  }))
+  records.map((movement) => {
+    const inventoryItem = firstItem(movement.inventario_items)
+    const product = inventoryItem ? firstItem(inventoryItem.prendas) : null
+
+    return {
+      id: movement.id,
+      type: movement.tipo,
+      quantity: movement.cantidad,
+      motive: movement.motivo,
+      reference: movement.referencia,
+      productId: product?.id ?? null,
+      productName: product?.nombre ?? null,
+      sku: product?.sku ?? null,
+      location: inventoryItem?.ubicacion ?? null,
+      timestamp: movement.created_at,
+    }
+  })
 
 const mapRecentReports = (records: ReportRecord[]) =>
   records.map((report) => ({
@@ -341,14 +357,14 @@ const fetchRawAnalyticsData = async (): Promise<RawAnalyticsData> => {
     ])
 
   return {
-    products: productsRes.data ?? [],
-    inventory: inventoryRes.data ?? [],
-    categories: categoriesRes.data ?? [],
+    products: Array.isArray(productsRes.data) ? (productsRes.data as ProductRecord[]) : [],
+    inventory: Array.isArray(inventoryRes.data) ? (inventoryRes.data as InventoryRecord[]) : [],
+    categories: Array.isArray(categoriesRes.data) ? (categoriesRes.data as CategoryRecord[]) : [],
     tryOnSessions: tryOnSessionsRes.count ?? 0,
-    tryOnItems: tryOnItemsRes.data ?? [],
-    productEvents: eventsRes.data ?? [],
-    inventoryMovements: movementsRes.data ?? [],
-    reports: reportsRes.data ?? [],
+    tryOnItems: Array.isArray(tryOnItemsRes.data) ? (tryOnItemsRes.data as TryOnItemRecord[]) : [],
+    productEvents: Array.isArray(eventsRes.data) ? (eventsRes.data as ProductEventRecord[]) : [],
+    inventoryMovements: Array.isArray(movementsRes.data) ? (movementsRes.data as InventoryMovementRecord[]) : [],
+    reports: Array.isArray(reportsRes.data) ? (reportsRes.data as ReportRecord[]) : [],
   }
 }
 
@@ -357,7 +373,8 @@ export const getDashboardOverview = async (): Promise<DashboardOverview> => {
 
   const totalInventoryValue = raw.inventory.reduce((acc, item) => {
     const quantity = item.cantidad ?? 0
-    const price = parseCurrency(item.prendas?.valor_unitario)
+    const product = firstItem(item.prendas)
+    const price = parseCurrency(product?.valor_unitario)
     return acc + quantity * price
   }, 0)
 
@@ -397,7 +414,8 @@ export const getReportsOverview = async (): Promise<ReportsOverview> => {
   const lowStock = computeLowStockProducts(raw.inventory)
   const totalInventoryValue = raw.inventory.reduce((acc, item) => {
     const quantity = item.cantidad ?? 0
-    const price = parseCurrency(item.prendas?.valor_unitario)
+    const product = firstItem(item.prendas)
+    const price = parseCurrency(product?.valor_unitario)
     return acc + quantity * price
   }, 0)
 

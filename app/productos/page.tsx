@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ChangeEvent } from "react"
 import { Loader2, Plus, Search, Sparkles, Star, TrendingUp } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -55,7 +55,7 @@ export default function ProductosPage() {
         apiFetch<{ data: Categoria[] }>("/api/categories"),
       ])
 
-      const productos = (productosResponse.data ?? []).map((producto) => ({
+      const productos = (productosResponse.data ?? []).map((producto: Producto) => ({
         ...producto,
         nuevo: esNuevo(producto.created_at),
       }))
@@ -134,7 +134,7 @@ export default function ProductosPage() {
                 <Input
                   placeholder="Busca tu próximo favorito..."
                   value={searchValue}
-                  onChange={(event) => setSearchValue(event.target.value)}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchValue(event.target.value)}
                   className="pl-14 pr-6 h-14 bg-background/50 border-border text-base rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>

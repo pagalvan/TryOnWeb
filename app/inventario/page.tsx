@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -163,6 +163,7 @@ export default function InventarioPage() {
 
   const abrirModalEditarProducto = (producto: InventoryProduct) => {
     setProductoEnEdicion(producto)
+    const metadataImageUrl = producto.metadata?.image_url
     setProductForm({
       id: producto.id,
       nombre: producto.nombre ?? "",
@@ -172,7 +173,7 @@ export default function InventarioPage() {
       descripcion: producto.descripcion ?? "",
       estado: producto.estado ?? "disponible",
       destacado: Boolean(producto.destacado),
-      imageUrl: producto.metadata?.image_url ?? "",
+      imageUrl: typeof metadataImageUrl === "string" ? metadataImageUrl : "",
       stockInicial: "0",
       ubicacion: DEFAULT_LOCATION,
     })
@@ -330,7 +331,7 @@ export default function InventarioPage() {
               <Input
                 placeholder="Buscar por nombre, categoría o SKU..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
                 className="pl-10 h-11 bg-background"
               />
             </div>
@@ -393,7 +394,8 @@ export default function InventarioPage() {
                     const stock = sumStock(producto.inventario_items)
                     const categoriaNombre = producto.categorias?.nombre ?? "Sin categoría"
                     const precio = producto.valor_unitario ?? 0
-                    const imagen = producto.metadata?.image_url ?? "/placeholder.svg"
+                    const rawImage = producto.metadata?.image_url
+                    const imagen = typeof rawImage === "string" && rawImage.length > 0 ? rawImage : "/placeholder.svg"
 
                     return (
                       <TableRow key={producto.id} className="hover:bg-muted/30">
@@ -583,6 +585,11 @@ function ProductDialog({ open, onOpenChange, categorias, productForm, onFormChan
     onFormChange({ ...productForm, [field]: value })
   }
 
+  const handleInputChange = (field: keyof ProductFormState) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      handleChange(field, event.target.value)
+    }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -593,17 +600,17 @@ function ProductDialog({ open, onOpenChange, categorias, productForm, onFormChan
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="nombre">Nombre</Label>
-            <Input id="nombre" value={productForm.nombre} onChange={(e) => handleChange("nombre", e.target.value)} />
+            <Input id="nombre" value={productForm.nombre} onChange={handleInputChange("nombre")} />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="sku">SKU</Label>
-            <Input id="sku" value={productForm.sku} onChange={(e) => handleChange("sku", e.target.value)} />
+            <Input id="sku" value={productForm.sku} onChange={handleInputChange("sku")} />
           </div>
 
           <div className="grid gap-2">
             <Label>Categoría</Label>
-            <Select value={productForm.categoriaId} onValueChange={(value) => handleChange("categoriaId", value)}>
+            <Select value={productForm.categoriaId} onValueChange={(value: string) => handleChange("categoriaId", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
@@ -624,19 +631,19 @@ function ProductDialog({ open, onOpenChange, categorias, productForm, onFormChan
               min="0"
               step="0.01"
               value={productForm.precio}
-              onChange={(e) => handleChange("precio", e.target.value)}
+              onChange={handleInputChange("precio")}
             />
           </div>
 
           <div className="grid gap-2">
             <Label>Descripción</Label>
-            <Textarea value={productForm.descripcion} onChange={(e) => handleChange("descripcion", e.target.value)} />
+            <Textarea value={productForm.descripcion} onChange={handleInputChange("descripcion")} />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Estado</Label>
-              <Select value={productForm.estado} onValueChange={(value) => handleChange("estado", value)}>
+              <Select value={productForm.estado} onValueChange={(value: string) => handleChange("estado", value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -655,33 +662,24 @@ function ProductDialog({ open, onOpenChange, categorias, productForm, onFormChan
                 <Label className="text-sm font-medium">Destacado</Label>
                 <p className="text-xs text-muted-foreground">Aparece primero en la lista</p>
               </div>
-              <Switch checked={productForm.destacado} onCheckedChange={(checked) => handleChange("destacado", checked)} />
+              <Switch checked={productForm.destacado} onCheckedChange={(checked: boolean) => handleChange("destacado", checked)} />
             </div>
           </div>
 
           <div className="grid gap-2">
             <Label>Imagen (URL)</Label>
-            <Input
-              placeholder="https://..."
-              value={productForm.imageUrl}
-              onChange={(e) => handleChange("imageUrl", e.target.value)}
-            />
+            <Input placeholder="https://..." value={productForm.imageUrl} onChange={handleInputChange("imageUrl")} />
           </div>
 
           {!isEditing && (
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Stock inicial</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={productForm.stockInicial}
-                  onChange={(e) => handleChange("stockInicial", e.target.value)}
-                />
+                <Input type="number" min="0" value={productForm.stockInicial} onChange={handleInputChange("stockInicial")} />
               </div>
               <div className="grid gap-2">
                 <Label>Ubicación</Label>
-                <Input value={productForm.ubicacion} onChange={(e) => handleChange("ubicacion", e.target.value)} />
+                <Input value={productForm.ubicacion} onChange={handleInputChange("ubicacion")} />
               </div>
             </div>
           )}
@@ -722,6 +720,10 @@ function StockDialog({ open, onOpenChange, product, stockForm, onFormChange, onS
 
   const handleChange = (field: keyof StockFormState, value: string) => {
     onFormChange({ ...stockForm, [field]: value })
+  }
+
+  const handleInputChange = (field: keyof StockFormState) => (event: ChangeEvent<HTMLInputElement>) => {
+    handleChange(field, event.target.value)
   }
 
   const existingItems = product.inventario_items || []
@@ -769,16 +771,11 @@ function StockDialog({ open, onOpenChange, product, stockForm, onFormChange, onS
           <div className="grid gap-3">
             <div className="grid gap-2">
               <Label>Ubicación</Label>
-              <Input value={stockForm.ubicacion} onChange={(e) => handleChange("ubicacion", e.target.value)} />
+              <Input value={stockForm.ubicacion} onChange={handleInputChange("ubicacion")} />
             </div>
             <div className="grid gap-2">
               <Label>Cantidad</Label>
-              <Input
-                type="number"
-                min="0"
-                value={stockForm.cantidad}
-                onChange={(e) => handleChange("cantidad", e.target.value)}
-              />
+              <Input type="number" min="0" value={stockForm.cantidad} onChange={handleInputChange("cantidad")} />
             </div>
             <div className="grid gap-2">
               <Label>Cantidad mínima</Label>
@@ -786,12 +783,12 @@ function StockDialog({ open, onOpenChange, product, stockForm, onFormChange, onS
                 type="number"
                 min="0"
                 value={stockForm.cantidadMinima}
-                onChange={(e) => handleChange("cantidadMinima", e.target.value)}
+                onChange={handleInputChange("cantidadMinima")}
               />
             </div>
             <div className="grid gap-2">
               <Label>Estado</Label>
-              <Select value={stockForm.estado} onValueChange={(value) => handleChange("estado", value)}>
+              <Select value={stockForm.estado} onValueChange={(value: string) => handleChange("estado", value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
