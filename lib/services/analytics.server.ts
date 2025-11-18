@@ -1,12 +1,20 @@
+import { addDays, endOfDay, formatISO, startOfDay } from "date-fns"
+
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import {
   type DashboardOverview,
+  type DashboardFiltersInput,
+  type DashboardFiltersState,
   type ReportsOverview,
   type LowStockProduct,
   type InventoryMovement,
   type ProductTrafficItem,
   type TopProductStat,
   type CategoryDistributionItem,
+  type DemandTrendPoint,
+  type InventoryFlowPoint,
+  type TryOnTrendPoint,
+  type DashboardAvailableFilters,
 } from "@/lib/types/analytics"
 
 const INVENTORY_SELECT = `
@@ -21,7 +29,8 @@ const INVENTORY_SELECT = `
     id,
     nombre,
     sku,
-    valor_unitario
+    valor_unitario,
+    categoria_id
   )
 `
 
@@ -38,7 +47,8 @@ const MOVEMENTS_SELECT = `
     prendas:prenda_id (
       id,
       nombre,
-      sku
+      sku,
+      categoria_id
     )
   )
 `
@@ -51,7 +61,8 @@ const PRODUCT_EVENTS_SELECT = `
   prendas:prenda_id (
     id,
     nombre,
-    sku
+    sku,
+    categoria_id
   )
 `
 
@@ -71,6 +82,7 @@ type InventoryProductRecord = {
   nombre: string
   sku: string | null
   valor_unitario: number | string | null
+  categoria_id: string | null
 }
 
 type InventoryRecord = {
@@ -93,14 +105,21 @@ type CategoryRecord = {
 
 type TryOnItemRecord = {
   id: string
-  prenda_id: string
+  prenda_id: string | null
   duracion_seg: number | null
+  created_at: string | null
+}
+
+type TryOnSessionRecord = {
+  id: string
+  created_at: string | null
 }
 
 type ProductSummaryRecord = {
   id: string
   nombre: string
   sku: string | null
+  categoria_id: string | null
 }
 
 type ProductEventRecord = {
@@ -136,7 +155,7 @@ type RawAnalyticsData = {
   products: ProductRecord[]
   inventory: InventoryRecord[]
   categories: CategoryRecord[]
-  tryOnSessions: number
+  tryOnSessions: TryOnSessionRecord[]
   tryOnItems: TryOnItemRecord[]
   productEvents: ProductEventRecord[]
   inventoryMovements: InventoryMovementRecord[]
@@ -155,6 +174,160 @@ const parseCurrency = (value: number | string | null | undefined) => {
   if (typeof value === "number") return value
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+const normalizeDashboardFilters = (filters?: DashboardFiltersInput): DashboardFiltersState => {
+  const now = new Date()
+  const defaultTo = endOfDay(now)
+  const defaultFrom = startOfDay(addDays(defaultTo, -29))
+
+  const parse = (value?: string | null) => {
+    if (!value) return null
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      return null
+    }
+    return parsed
+  }
+
+  let fromDate = startOfDay(parse(filters?.from) ?? defaultFrom)
+  let toDate = endOfDay(parse(filters?.to) ?? defaultTo)
+
+  if (fromDate > toDate) {
+    const swap = fromDate
+    fromDate = startOfDay(toDate)
+    toDate = endOfDay(swap)
+  }
+
+  return {
+    from: fromDate.toISOString(),
+    to: toDate.toISOString(),
+    categoryId: filters?.categoryId ?? null,
+    location: filters?.location ?? null,
+    stockStatus: filters?.stockStatus ?? "all",
+  }
+}
+
+const isWithinRange = (value: string | null | undefined, from: Date, to: Date) => {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  return date >= from && date <= to
+}
+
+const formatDateKey = (value: string | Date | null | undefined) => {
+  if (!value) return null
+  const date = typeof value === "string" ? new Date(value) : value
+  if (Number.isNaN(date?.getTime?.())) return null
+  return formatISO(startOfDay(date as Date), { representation: "date" })
+}
+
+const computeDemandTrend = (
+  events: ProductEventRecord[],
+  from: Date,
+  to: Date,
+): DemandTrendPoint[] => {
+  const map = new Map<string, { views: number; tryons: number }>()
+
+  for (const event of events) {
+    const key = formatDateKey(event.created_at)
+    if (!key) continue
+
+    const bucket = map.get(key) ?? { views: 0, tryons: 0 }
+    if (event.event_type === "view") {
+      bucket.views += 1
+    }
+    if (event.event_type === "tryon") {
+      bucket.tryons += 1
+    }
+    map.set(key, bucket)
+  }
+
+  const startDate = startOfDay(from)
+  const endDate = startOfDay(to)
+  const result: DemandTrendPoint[] = []
+
+  for (let cursor = startDate; cursor <= endDate; cursor = addDays(cursor, 1)) {
+    const key = formatISO(cursor, { representation: "date" })
+    const bucket = map.get(key) ?? { views: 0, tryons: 0 }
+    result.push({ date: key, views: bucket.views, tryons: bucket.tryons })
+  }
+
+  return result
+}
+
+const computeInventoryFlowTrend = (
+  movements: InventoryMovementRecord[],
+  from: Date,
+  to: Date,
+): InventoryFlowPoint[] => {
+  const map = new Map<string, { inbound: number; outbound: number }>()
+
+  for (const movement of movements) {
+    const key = formatDateKey(movement.created_at)
+    if (!key) continue
+
+    const bucket = map.get(key) ?? { inbound: 0, outbound: 0 }
+    const type = movement.tipo?.toLowerCase?.() ?? ""
+    const quantity = movement.cantidad ?? 0
+
+    if (type.includes("salida") || type.includes("egreso") || type.includes("baja")) {
+      bucket.outbound += quantity
+    } else {
+      bucket.inbound += quantity
+    }
+
+    map.set(key, bucket)
+  }
+
+  const startDate = startOfDay(from)
+  const endDate = startOfDay(to)
+  const result: InventoryFlowPoint[] = []
+
+  for (let cursor = startDate; cursor <= endDate; cursor = addDays(cursor, 1)) {
+    const key = formatISO(cursor, { representation: "date" })
+    const bucket = map.get(key) ?? { inbound: 0, outbound: 0 }
+    result.push({ date: key, inbound: bucket.inbound, outbound: bucket.outbound })
+  }
+
+  return result
+}
+
+const computeTryOnTrend = (
+  sessions: TryOnSessionRecord[],
+  items: TryOnItemRecord[],
+  from: Date,
+  to: Date,
+): TryOnTrendPoint[] => {
+  const sessionMap = new Map<string, number>()
+  const itemMap = new Map<string, number>()
+
+  for (const session of sessions) {
+    const key = formatDateKey(session.created_at)
+    if (!key) continue
+    sessionMap.set(key, (sessionMap.get(key) ?? 0) + 1)
+  }
+
+  for (const item of items) {
+    const key = formatDateKey(item.created_at)
+    if (!key) continue
+    itemMap.set(key, (itemMap.get(key) ?? 0) + 1)
+  }
+
+  const startDate = startOfDay(from)
+  const endDate = startOfDay(to)
+  const result: TryOnTrendPoint[] = []
+
+  for (let cursor = startDate; cursor <= endDate; cursor = addDays(cursor, 1)) {
+    const key = formatISO(cursor, { representation: "date" })
+    result.push({
+      date: key,
+      sessions: sessionMap.get(key) ?? 0,
+      items: itemMap.get(key) ?? 0,
+    })
+  }
+
+  return result
 }
 
 const computeLowStockProducts = (inventory: InventoryRecord[]): LowStockProduct[] => {
@@ -345,8 +518,16 @@ const fetchRawAnalyticsData = async (): Promise<RawAnalyticsData> => {
       supabase.from("prendas").select("id, nombre, sku, estado, valor_unitario, categoria_id"),
       supabase.from("inventario_items").select(INVENTORY_SELECT),
       supabase.from("categorias").select("id, nombre, estado, prendas:prendas ( id )"),
-      supabase.from("tryon_sessions").select("id", { count: "exact", head: true }),
-      supabase.from("tryon_items").select("id, prenda_id, duracion_seg"),
+      supabase
+        .from("tryon_sessions")
+        .select("id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("tryon_items")
+        .select("id, prenda_id, duracion_seg, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000),
       supabase.from("product_events").select(PRODUCT_EVENTS_SELECT).order("created_at", { ascending: false }).limit(500),
       supabase
         .from("inventario_movimientos")
@@ -360,7 +541,7 @@ const fetchRawAnalyticsData = async (): Promise<RawAnalyticsData> => {
     products: Array.isArray(productsRes.data) ? (productsRes.data as ProductRecord[]) : [],
     inventory: Array.isArray(inventoryRes.data) ? (inventoryRes.data as InventoryRecord[]) : [],
     categories: Array.isArray(categoriesRes.data) ? (categoriesRes.data as CategoryRecord[]) : [],
-    tryOnSessions: tryOnSessionsRes.count ?? 0,
+    tryOnSessions: Array.isArray(tryOnSessionsRes.data) ? (tryOnSessionsRes.data as TryOnSessionRecord[]) : [],
     tryOnItems: Array.isArray(tryOnItemsRes.data) ? (tryOnItemsRes.data as TryOnItemRecord[]) : [],
     productEvents: Array.isArray(eventsRes.data) ? (eventsRes.data as ProductEventRecord[]) : [],
     inventoryMovements: Array.isArray(movementsRes.data) ? (movementsRes.data as InventoryMovementRecord[]) : [],
@@ -368,43 +549,216 @@ const fetchRawAnalyticsData = async (): Promise<RawAnalyticsData> => {
   }
 }
 
-export const getDashboardOverview = async (): Promise<DashboardOverview> => {
+export const getDashboardOverview = async (filters?: DashboardFiltersInput): Promise<DashboardOverview> => {
   const raw = await fetchRawAnalyticsData()
 
-  const totalInventoryValue = raw.inventory.reduce((acc, item) => {
+  const normalizedFilters = normalizeDashboardFilters(filters)
+  const fromDate = new Date(normalizedFilters.from)
+  const toDate = new Date(normalizedFilters.to)
+
+  const productMap = new Map(raw.products.map((product) => [product.id, product]))
+  const categoryMap = new Map(raw.categories.map((category) => [category.id, category.nombre]))
+  const UNCATEGORIZED_KEY = "__uncategorized__"
+
+  const filteredInventory = raw.inventory.filter((item) => {
+    if (normalizedFilters.location && item.ubicacion !== normalizedFilters.location) {
+      return false
+    }
+
+    if (!normalizedFilters.categoryId) {
+      return true
+    }
+
+    const product = firstItem(item.prendas)
+    const productId = product?.id ?? item.prenda_id ?? null
+    if (!productId) {
+      return false
+    }
+
+    const categoryId = product?.categoria_id ?? productMap.get(productId)?.categoria_id ?? null
+    return categoryId === normalizedFilters.categoryId
+  })
+
+  const filteredMovementsRecords = raw.inventoryMovements.filter((movement) => {
+    if (!isWithinRange(movement.created_at, fromDate, toDate)) {
+      return false
+    }
+
+    const inventoryItem = firstItem(movement.inventario_items)
+
+    if (normalizedFilters.location && inventoryItem?.ubicacion !== normalizedFilters.location) {
+      return false
+    }
+
+    if (!normalizedFilters.categoryId) {
+      return true
+    }
+
+    const product = inventoryItem ? firstItem(inventoryItem.prendas) : null
+    const productId = product?.id ?? null
+    const categoryId = product?.categoria_id ?? (productId ? productMap.get(productId)?.categoria_id ?? null : null)
+
+    return categoryId === normalizedFilters.categoryId
+  })
+
+  const filteredProductEvents = raw.productEvents.filter((event) => {
+    if (!isWithinRange(event.created_at, fromDate, toDate)) {
+      return false
+    }
+
+    if (!normalizedFilters.categoryId) {
+      return true
+    }
+
+    const product = firstItem(event.prendas)
+    const productId = event.prenda_id ?? product?.id ?? null
+    const categoryId = product?.categoria_id ?? (productId ? productMap.get(productId)?.categoria_id ?? null : null)
+
+    return categoryId === normalizedFilters.categoryId
+  })
+
+  const filteredTryOnItems = raw.tryOnItems.filter((item) => {
+    if (!isWithinRange(item.created_at, fromDate, toDate)) {
+      return false
+    }
+
+    if (!normalizedFilters.categoryId) {
+      return true
+    }
+
+    const productId = item.prenda_id ?? null
+    if (!productId) {
+      return false
+    }
+
+    const categoryId = productMap.get(productId)?.categoria_id ?? null
+    return categoryId === normalizedFilters.categoryId
+  })
+
+  const filteredTryOnSessions = raw.tryOnSessions.filter((session) => isWithinRange(session.created_at, fromDate, toDate))
+
+  const totalInventoryValue = filteredInventory.reduce((acc, item) => {
     const quantity = item.cantidad ?? 0
     const product = firstItem(item.prendas)
-    const price = parseCurrency(product?.valor_unitario)
+    const productId = product?.id ?? item.prenda_id ?? null
+    const priceSource = product ?? (productId ? productMap.get(productId) : null)
+    const price = parseCurrency(priceSource?.valor_unitario)
     return acc + quantity * price
   }, 0)
 
-  const totalStockUnits = raw.inventory.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
-  const lowStock = computeLowStockProducts(raw.inventory)
-  const movements = mapMovements(raw.inventoryMovements).slice(0, 5)
+  const totalStockUnits = filteredInventory.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
+
+  const uniqueProductIds = new Set<string>()
+  for (const item of filteredInventory) {
+    const product = firstItem(item.prendas)
+    const productId = product?.id ?? item.prenda_id
+    if (productId) {
+      uniqueProductIds.add(productId)
+    }
+  }
+
+  const lowStockAll = computeLowStockProducts(filteredInventory)
+  const lowStockFiltered =
+    normalizedFilters.stockStatus === "all"
+      ? lowStockAll
+      : lowStockAll.filter((item) => item.status === normalizedFilters.stockStatus)
+
+  const categoryProductMap = new Map<string, Set<string>>()
+  for (const item of filteredInventory) {
+    const product = firstItem(item.prendas)
+    const productId = product?.id ?? item.prenda_id ?? null
+    if (!productId) continue
+
+    const categoryId = product?.categoria_id ?? productMap.get(productId)?.categoria_id ?? null
+    const key = categoryId ?? UNCATEGORIZED_KEY
+    const current = categoryProductMap.get(key) ?? new Set<string>()
+    current.add(productId)
+    categoryProductMap.set(key, current)
+  }
+
+  const availableFilters: DashboardAvailableFilters = {
+    categories: raw.categories
+      .filter((category) => category.estado !== "inactiva")
+      .map((category) => ({ id: category.id, nombre: category.nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
+    locations: Array.from(new Set(raw.inventory.map((item) => item.ubicacion).filter((value): value is string => Boolean(value)))).sort((a, b) =>
+      a.localeCompare(b, "es"),
+    ),
+  }
+
+  const categories = normalizedFilters.location
+    ? Array.from(categoryProductMap.entries())
+        .map(([categoryId, products]) => ({
+          id: categoryId === UNCATEGORIZED_KEY ? "sin-categoria" : categoryId,
+          nombre:
+            categoryId === UNCATEGORIZED_KEY
+              ? "Sin categoría"
+              : categoryMap.get(categoryId) ?? "Sin categoría",
+          productCount: products.size,
+        }))
+        .sort((a, b) => b.productCount - a.productCount)
+    : raw.categories
+        .filter((category) => !normalizedFilters.categoryId || category.id === normalizedFilters.categoryId)
+        .map((category) => ({
+          id: category.id,
+          nombre: category.nombre,
+          productCount: Array.isArray(category.prendas) ? category.prendas.length : 0,
+        }))
+        .sort((a, b) => b.productCount - a.productCount)
+
+  const sortedMovements = [...filteredMovementsRecords].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime()
+    const timeB = new Date(b.created_at).getTime()
+    return timeB - timeA
+  })
+
+  const tryOnTotalDuration = filteredTryOnItems.reduce((acc, item) => acc + (item.duracion_seg ?? 0), 0)
+  const tryOnUniqueProducts = new Set(filteredTryOnItems.map((item) => item.prenda_id).filter((id): id is string => Boolean(id))).size
 
   return {
+    context: {
+      generatedAt: new Date().toISOString(),
+      filters: normalizedFilters,
+      availableFilters,
+    },
     metrics: {
-      totalProducts: raw.products.length,
-      activeProducts: raw.products.filter((product) => product.estado !== "inactiva").length,
-      totalCategories: raw.categories.length,
+      totalProducts:
+        normalizedFilters.categoryId || normalizedFilters.location ? uniqueProductIds.size : raw.products.length,
+      activeProducts: raw.products.filter((product) => {
+        if (product.estado === "inactiva") return false
+        if (normalizedFilters.categoryId && product.categoria_id !== normalizedFilters.categoryId) return false
+        if (normalizedFilters.location && !uniqueProductIds.has(product.id)) return false
+        return true
+      }).length,
+      totalCategories: normalizedFilters.location
+        ? categoryProductMap.size
+        : normalizedFilters.categoryId
+          ? raw.categories.filter((category) => category.id === normalizedFilters.categoryId).length
+          : raw.categories.length,
       totalStockUnits,
       totalInventoryValue,
-      lowStockProducts: lowStock.length,
-      tryOnSessions: raw.tryOnSessions,
-      tryOnItems: raw.tryOnItems.length,
+      lowStockProducts: lowStockAll.length,
+      tryOnSessions: filteredTryOnSessions.length,
+      tryOnItems: filteredTryOnItems.length,
     },
-    categories: raw.categories
-      .map((category) => ({
-        id: category.id,
-        nombre: category.nombre,
-        productCount: Array.isArray(category.prendas) ? category.prendas.length : 0,
-      }))
-      .sort((a, b) => b.productCount - a.productCount),
+    categories,
     inventory: {
-      lowStock,
-      movements,
+      lowStock: lowStockFiltered,
+      movements: mapMovements(sortedMovements).slice(0, 8),
     },
-    productTraffic: computeProductTraffic(raw.productEvents),
+    productTraffic: computeProductTraffic(filteredProductEvents),
+    topProducts: computeTopProducts(filteredProductEvents),
+    demandTrend: computeDemandTrend(filteredProductEvents, fromDate, toDate),
+    inventoryFlow: computeInventoryFlowTrend(filteredMovementsRecords, fromDate, toDate),
+    tryOn: {
+      summary: {
+        sessions: filteredTryOnSessions.length,
+        items: filteredTryOnItems.length,
+        averageDurationSeconds: filteredTryOnItems.length > 0 ? tryOnTotalDuration / filteredTryOnItems.length : 0,
+        uniqueProducts: tryOnUniqueProducts,
+      },
+      trend: computeTryOnTrend(filteredTryOnSessions, filteredTryOnItems, fromDate, toDate),
+    },
   }
 }
 
@@ -440,7 +794,7 @@ export const getReportsOverview = async (): Promise<ReportsOverview> => {
       conversionRate,
     },
     tryOn: {
-      sessions: raw.tryOnSessions,
+      sessions: raw.tryOnSessions.length,
       items: raw.tryOnItems.length,
       averageDurationSeconds: averageDuration,
       uniqueProducts: uniqueTryOnProducts,

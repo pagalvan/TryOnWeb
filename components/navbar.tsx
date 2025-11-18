@@ -43,7 +43,6 @@ export function Navbar() {
     { href: "/productos", label: "Productos" },
     { href: "/categorias", label: "Categorías" },
     { href: "/probador-virtual", label: "Probador Virtual" },
-    { href: "/reportes", label: "Reportes" },
     { href: "/configuracion", label: "Configuración" },
   ]
 

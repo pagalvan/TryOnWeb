@@ -36,6 +36,47 @@ export type ProductTrafficItem = {
   count: number
 }
 
+export type DashboardFilterStatus = "all" | "warning" | "critical"
+
+export type DashboardFiltersInput = Partial<{
+  from: string
+  to: string
+  categoryId: string | null
+  location: string | null
+  stockStatus: DashboardFilterStatus
+}>
+
+export type DashboardFiltersState = {
+  from: string
+  to: string
+  categoryId: string | null
+  location: string | null
+  stockStatus: DashboardFilterStatus
+}
+
+export type DashboardAvailableFilters = {
+  categories: Array<{ id: string; nombre: string }>
+  locations: string[]
+}
+
+export type DemandTrendPoint = {
+  date: string
+  views: number
+  tryons: number
+}
+
+export type InventoryFlowPoint = {
+  date: string
+  inbound: number
+  outbound: number
+}
+
+export type TryOnTrendPoint = {
+  date: string
+  sessions: number
+  items: number
+}
+
 export type DashboardMetrics = {
   totalProducts: number
   activeProducts: number
@@ -48,6 +89,11 @@ export type DashboardMetrics = {
 }
 
 export type DashboardOverview = {
+  context: {
+    generatedAt: string
+    filters: DashboardFiltersState
+    availableFilters: DashboardAvailableFilters
+  }
   metrics: DashboardMetrics
   categories: Array<{ id: string; nombre: string; productCount: number }>
   inventory: {
@@ -55,6 +101,13 @@ export type DashboardOverview = {
     movements: InventoryMovement[]
   }
   productTraffic: ProductTrafficItem[]
+  topProducts: TopProductStat[]
+  demandTrend: DemandTrendPoint[]
+  inventoryFlow: InventoryFlowPoint[]
+  tryOn: {
+    summary: TryOnStats
+    trend: TryOnTrendPoint[]
+  }
 }
 
 export type TopProductStat = {
