@@ -285,16 +285,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     rawSessions: point.tryons,
   }))
 
-  const profitSeries = inventoryFlowExport.map((point) => ({
-    label: point.label,
-    value: point.inbound - point.outbound,
-  }))
-
-  const transactionsSeries = inventoryFlowExport.map((point) => ({
-    label: point.label,
-    value: point.inbound + point.outbound,
-  }))
-
   const audienceSeries = demandTrendData.slice(-6).map((point) => ({
     label: formatShortDate(point.date),
     views: point.views,
@@ -426,8 +416,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               status: "OK",
             },
           ],
-    profitSeries,
-    transactionsSeries,
     audienceSeries,
     inventoryStatus: inventoryStatusSummary,
     inventoryHealthPercent: stockHealth,

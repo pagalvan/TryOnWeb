@@ -20,7 +20,8 @@ export const productPayloadSchema = z.object({
     .partial()
     .optional(),
   stockInicial: z.number().int().min(0).default(0),
-  ubicacion: z.string().min(2).default("Bodega Principal"),
+  stockLocationId: z.string().uuid().optional().or(z.literal("")).nullable(),
+  ubicacion: z.string().min(2).optional().or(z.literal("")).nullable(),
 })
 
 export const productUpdateSchema = productPayloadSchema.partial().extend({
@@ -29,7 +30,8 @@ export const productUpdateSchema = productPayloadSchema.partial().extend({
 
 export const stockSchema = z.object({
   itemId: z.string().uuid().optional().or(z.literal("")),
-  ubicacion: z.string().min(2, "La ubicación es obligatoria"),
+  bodegaId: z.string().uuid().optional().or(z.literal("")).nullable(),
+  ubicacion: z.string().min(2, "La ubicación es obligatoria").optional().or(z.literal("")).nullable(),
   cantidad: z.number().int().min(0, "La cantidad debe ser positiva"),
   cantidad_minima: z.number().int().min(0).default(0),
   estado: z.enum(["ok", "bajo", "sin_stock", "bloqueado"]),

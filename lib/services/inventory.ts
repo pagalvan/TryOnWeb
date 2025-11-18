@@ -6,12 +6,22 @@ import {
 
 export type InventoryCategory = Pick<CategorySummary, "id" | "nombre">
 
+export type InventoryLocation = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  direccion: string | null
+  ciudad: string | null
+}
+
 export type InventoryItem = {
   id: string
   ubicacion: string
   cantidad: number
   cantidad_minima: number
   estado: string | null
+  bodega_id?: string
+  bodega?: InventoryLocation | null
 }
 
 export type InventoryProduct = {
@@ -38,14 +48,14 @@ export type CreateProductPayload = {
   destacado: boolean
   metadata?: Record<string, unknown> | null
   stockInicial?: number
-  ubicacion?: string
+  stockLocationId?: string | null
 }
 
-export type UpdateProductPayload = Partial<Omit<CreateProductPayload, "stockInicial" | "ubicacion">>
+export type UpdateProductPayload = Partial<Omit<CreateProductPayload, "stockInicial" | "stockLocationId">>
 
 export type UpsertStockPayload = {
   itemId?: string | null
-  ubicacion: string
+  bodegaId: string
   cantidad: number
   cantidad_minima: number
   estado: string
@@ -81,11 +91,17 @@ export async function listProducts(options: ListProductsOptions = {}): Promise<I
 export async function fetchInventoryOverview(): Promise<{
   products: InventoryProduct[]
   categories: InventoryCategory[]
+  locations: InventoryLocation[]
 }> {
-  const [products, categories] = await Promise.all([listProducts(), fetchCategories()])
+  const [products, categories, locations] = await Promise.all([
+    listProducts(),
+    fetchCategories(),
+    listInventoryLocations(),
+  ])
   return {
     products,
     categories: categories.map((category) => ({ id: category.id, nombre: category.nombre })),
+    locations,
   }
 }
 
@@ -124,4 +140,26 @@ export async function deleteProductStock(productId: string, stockId: string): Pr
   return apiFetch<ApiMessageResponse>(`/api/products/${productId}/stock/${stockId}`, {
     method: "DELETE",
   })
+}
+
+export async function listInventoryLocations(): Promise<InventoryLocation[]> {
+  const response = await apiFetch<ApiListResponse<InventoryLocation[]>>("/api/inventory-locations")
+  return response.data ?? []
+}
+
+export type CreateInventoryLocationPayload = {
+  nombre: string
+  descripcion?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+}
+
+export async function createInventoryLocation(
+  payload: CreateInventoryLocationPayload
+): Promise<InventoryLocation | null> {
+  const response = await apiFetch<ApiListResponse<InventoryLocation>>("/api/inventory-locations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+  return response.data ?? null
 }

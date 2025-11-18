@@ -3,11 +3,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { stockSchema } from "@/lib/schemas/product"
+import { resolveInventoryLocation } from "../../location-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
   categorias:categoria_id ( id, nombre ),
-  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado )
+  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado, bodega_id )
 `
 
 const mapProduct = (producto: any) => ({
@@ -35,12 +36,22 @@ export async function PUT(request: NextRequest, { params }: { params: StockParam
     return NextResponse.json({ message: "Validación fallida", errors }, { status: 422 })
   }
 
-  const { itemId, ubicacion, cantidad, cantidad_minima, estado } = result.data
+  const { itemId, bodegaId, ubicacion, cantidad, cantidad_minima, estado } = result.data
   const supabase = getSupabaseAdminClient()
+
+  const targetLocation = await resolveInventoryLocation(supabase, {
+    locationId: bodegaId,
+    locationName: ubicacion,
+  })
+
+  if (!targetLocation) {
+    return NextResponse.json({ message: "Selecciona una bodega válida" }, { status: 400 })
+  }
 
   const record = {
     prenda_id: id,
-    ubicacion,
+    ubicacion: targetLocation.nombre,
+    bodega_id: targetLocation.id,
     cantidad,
     cantidad_minima,
     estado,
