@@ -446,10 +446,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
 
   return (
-    <div className="min-h-screen bg-[#f5f7ff]">
+    <div className="min-h-screen bg-[#f5f7ff] overflow-x-hidden">
       <Navbar />
 
-      <main id="dashboard-export-area" className="container mx-auto max-w-[1180px] space-y-8 px-6 py-10">
+      <main
+        id="dashboard-export-area"
+        className="container mx-auto max-w-[1180px] space-y-8 px-4 py-10 sm:px-6"
+      >
         <header className="space-y-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -491,7 +494,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
             return (
               <Card key={card.id} className={`${panelClass} overflow-hidden p-6`}>
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.accent} text-white`}>
                     <Icon className="h-5 w-5" />
                   </div>
@@ -558,7 +561,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             style={{ background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)" }}
           >
             <CardHeader className="flex flex-col gap-2 border-b border-slate-100/80 p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle className="text-lg font-semibold text-slate-900">Probador virtual</CardTitle>
                   <CardDescription className="text-sm text-slate-500">
@@ -590,7 +593,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           style={{ background: "linear-gradient(135deg, #ffe0f2 0%, #ffcfe7 100%)" }}
         >
           <div className="flex flex-col gap-2 border-b border-slate-100 pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-slate-900">Comportamiento de demanda</p>
                 <p className="text-xs text-slate-500">Comparte la relación views/try-ons de tu catálogo.</p>
@@ -611,7 +614,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             className={`${panelClass} xl:col-span-7`}
             style={{ background: "linear-gradient(135deg, #fff4d7 0%, #ffe3a3 100%)" }}
           >
-            <CardHeader className="flex items-center justify-between p-6 pb-4">
+            <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-slate-900">Top productos destacados</CardTitle>
                 <CardDescription className="text-sm text-slate-500">
@@ -632,7 +635,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                   return (
                     <div key={product.productId} className="rounded-2xl border border-slate-100 p-4">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">#{index + 1}</p>
                           <p className="mt-1 text-sm font-semibold text-slate-900">{product.productName}</p>
@@ -642,7 +645,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                           {formatNumber(total)} interacciones
                         </Badge>
                       </div>
-                      <div className="mt-4 grid gap-3 text-xs text-slate-500 sm:grid-cols-4">
+                        <div className="mt-4 grid gap-3 text-xs text-slate-500 sm:grid-cols-2 lg:grid-cols-4">
                         <span>Vistas {formatNumber(product.views)}</span>
                         <span>Try-ons {formatNumber(product.tryons)}</span>
                         <span>Favoritos {formatNumber(product.favorites)}</span>
@@ -688,7 +691,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </div>
                 ) : (
                   categoriesPreview.map((category) => (
-                    <div key={category.id} className="flex items-center justify-between text-sm text-slate-600">
+                      <div key={category.id} className="flex flex-col gap-1 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                       <span>{category.nombre}</span>
                       <span className="font-semibold text-slate-900">{formatNumber(category.productCount)} uds</span>
                     </div>
@@ -706,7 +709,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   const share = trafficTotal > 0 ? Math.round((item.count / trafficTotal) * 100) : 0
 
                   return (
-                    <div key={item.type} className="flex items-center justify-between text-sm text-slate-600">
+                    <div key={item.type} className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                       <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${palette.bg} ${palette.text}`}>
                         <span className="h-2 w-2 rounded-full bg-current" />
                         {item.label}
@@ -725,7 +728,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             className={`${panelClass} xl:col-span-5`}
             style={{ background: "linear-gradient(135deg, #f3e8ff 0%, #e0cdfc 100%)" }}
           >
-            <CardHeader className="flex items-center justify-between p-6 pb-4">
+            <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-slate-900">Alertas de stock</CardTitle>
                 <CardDescription className="text-sm text-slate-500">
@@ -881,7 +884,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     )
                     return (
                       <div key={category.id} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm text-slate-600">
+                        <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                           <span className="font-medium text-slate-900">{category.nombre}</span>
                           <span>{formatNumber(category.productCount)} uds · {share}%</span>
                         </div>
@@ -902,7 +905,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   reportsTraffic.map((item) => {
                     const share = Math.round((item.count / reportsTrafficTotal) * 100)
                     return (
-                      <div key={item.type} className="flex items-center justify-between text-sm text-slate-600">
+                      <div key={item.type} className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                         <span className="capitalize text-slate-900">{item.label}</span>
                         <span className="font-semibold text-slate-900">{formatNumber(item.count)} · {share}%</span>
                       </div>
@@ -918,7 +921,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             style={{ background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)" }}
             id="reportes"
           >
-            <CardHeader className="flex items-center justify-between p-6 pb-4">
+            <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-slate-900">Reportes recientes</CardTitle>
                 <CardDescription className="text-sm text-slate-500">

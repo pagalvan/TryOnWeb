@@ -303,17 +303,17 @@ export default function InventarioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-10 gap-6">
+      <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="h-1 w-8 bg-primary rounded-full" />
               <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Gestión de Productos</p>
             </div>
-            <h1 className="text-5xl font-bold text-foreground mb-2 tracking-tight">Inventario</h1>
+            <h1 className="mb-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Inventario</h1>
             <p className="text-lg text-muted-foreground">Administra tu catálogo de productos y existencias</p>
           </div>
 
@@ -325,7 +325,7 @@ export default function InventarioPage() {
         </div>
 
         <div className="bg-card border border-border rounded-xl p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col gap-4 md:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -336,7 +336,7 @@ export default function InventarioPage() {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" className="gap-2 bg-transparent">
                 <Filter className="h-4 w-4" />
                 Filtros
@@ -369,15 +369,15 @@ export default function InventarioPage() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mb-3" />
               Cargando inventario...
             </div>
           ) : (
-            <>
-              <Table>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="font-semibold">Producto</TableHead>
@@ -483,23 +483,22 @@ export default function InventarioPage() {
                   })}
                 </TableBody>
               </Table>
-
-              {productosFiltrados.length === 0 && (
-                <div className="text-center py-16 border-t border-border">
-                  <div className="h-16 w-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                    <ShoppingBag className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-foreground">No se encontraron productos</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Intenta ajustar los filtros o agrega nuevos productos al inventario
-                  </p>
-                  <Button className="gap-2" onClick={abrirModalNuevoProducto}>
-                    <Plus className="h-4 w-4" /> Agregar Producto
-                  </Button>
-                </div>
-              )}
-            </>
+            </div>
           )}
+          {!loading && productosFiltrados.length === 0 ? (
+            <div className="border-t border-border py-16 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="mb-2 text-xl font-semibold text-foreground">No se encontraron productos</h3>
+              <p className="mb-6 text-muted-foreground">
+                Intenta ajustar los filtros o agrega nuevos productos al inventario
+              </p>
+              <Button className="gap-2" onClick={abrirModalNuevoProducto}>
+                <Plus className="h-4 w-4" /> Agregar Producto
+              </Button>
+            </div>
+          ) : null}
         </div>
       </main>
 
