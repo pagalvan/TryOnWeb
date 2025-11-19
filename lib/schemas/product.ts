@@ -1,5 +1,18 @@
 import { z } from "zod"
 
+const lensAssetPayloadSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    lensId: z.string().max(128).optional(),
+    provider: z.string().max(64).optional(),
+    tipo: z.enum(["glb", "lens", "image", "video", "anchor"]).optional(),
+    url: z.string().max(512).optional(),
+    version: z.string().max(128).optional().nullable(),
+    metadata: z.record(z.any()).optional().nullable(),
+    activo: z.boolean().optional(),
+  })
+  .partial()
+
 export const productPayloadSchema = z.object({
   nombre: z.string().min(2, "El nombre es obligatorio"),
   sku: z.string().max(64).optional().or(z.literal("")),
@@ -22,6 +35,7 @@ export const productPayloadSchema = z.object({
   stockInicial: z.number().int().min(0).default(0),
   stockLocationId: z.string().uuid().optional().or(z.literal("")).nullable(),
   ubicacion: z.string().min(2).optional().or(z.literal("")).nullable(),
+  lensAsset: lensAssetPayloadSchema.optional().nullable(),
 })
 
 export const productUpdateSchema = productPayloadSchema.partial().extend({

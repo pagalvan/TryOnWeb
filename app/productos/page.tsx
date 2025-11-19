@@ -17,6 +17,16 @@ type Categoria = {
   nombre: string
 }
 
+type LensAsset = {
+  id: string
+  tipo: string
+  url: string
+  provider: string | null
+  version: string | null
+  metadata: Record<string, unknown> | null
+  activo: boolean
+}
+
 type Producto = {
   id: string
   nombre: string
@@ -30,6 +40,8 @@ type Producto = {
   sku: string | null
   created_at?: string
   nuevo?: boolean
+  hasLens?: boolean
+  lens_assets?: LensAsset[] | null
 }
 
 export default function ProductosPage() {
@@ -56,10 +68,14 @@ export default function ProductosPage() {
         apiFetch<{ data: Categoria[] }>("/api/categories"),
       ])
 
-      const productos = (productosResponse.data ?? []).map((producto: Producto) => ({
-        ...producto,
-        nuevo: esNuevo(producto.created_at),
-      }))
+      const productos = (productosResponse.data ?? []).map((producto: Producto) => {
+        const lensId = getProductLensId(producto)
+        return {
+          ...producto,
+          nuevo: esNuevo(producto.created_at),
+          hasLens: lensId.length > 0,
+        }
+      })
 
       setProductos(productos)
       setCategorias(categoriasResponse.data ?? [])
@@ -241,9 +257,16 @@ export default function ProductosPage() {
                   </div>
 
                   <div className="p-8 md:p-12 flex flex-col justify-center">
-                    <Badge className="w-fit mb-4 bg-accent text-accent-foreground border-0 px-4 py-1">
-                      {productoDestacado.categorias?.nombre ?? "Sin categoría"}
-                    </Badge>
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                      <Badge className="bg-accent text-accent-foreground border-0 px-4 py-1">
+                        {productoDestacado.categorias?.nombre ?? "Sin categoría"}
+                      </Badge>
+                      {productoDestacado.hasLens ? (
+                        <Badge className="flex items-center gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-500">
+                          <Sparkles className="h-3 w-3" /> AR disponible
+                        </Badge>
+                      ) : null}
+                    </div>
                     <h3 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors">
                       {productoDestacado.nombre}
                     </h3>
@@ -314,6 +337,11 @@ export default function ProductosPage() {
                         {producto.nuevo && (
                           <Badge className="w-fit bg-primary text-primary-foreground border-0 shadow-lg">Nuevo</Badge>
                         )}
+                        {producto.hasLens ? (
+                          <Badge className="w-fit border-emerald-500/30 bg-emerald-500/15 text-emerald-500 shadow-lg">
+                            <Sparkles className="mr-1 h-3 w-3" /> AR disponible
+                          </Badge>
+                        ) : null}
                       </div>
 
                       <div
@@ -388,4 +416,85 @@ function esNuevo(created_at?: string) {
 function formatCurrency(value: number | null | undefined) {
   if (value === null || value === undefined) return "--"
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value)
+}
+
+function getProductLensId(producto?: Producto | null): string {
+  const asset = getPrimaryLensAsset(producto)
+  if (asset) {
+    const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata : null
+    if (metadata) {
+      const candidates = [metadata.lens_id, metadata.lensId, metadata.id]
+      for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim().length > 0) {
+          return candidate.trim()
+        }
+      }
+    }
+
+    const fromUrl = extractLensIdFromUrl(asset.url)
+    if (fromUrl) {
+      return fromUrl
+    }
+  }
+
+  const fallback = typeof producto?.metadata?.lensId === "string" ? producto.metadata.lensId.trim() : ""
+  return fallback
+}
+
+function getPrimaryLensAsset(producto?: Producto | null): LensAsset | null {
+  if (!producto) return null
+  const assets = Array.isArray(producto.lens_assets) ? producto.lens_assets : []
+  if (!assets.length) return null
+
+  const active = assets.filter((asset) => asset && asset.activo !== false)
+  if (!active.length) return null
+
+  const snapLens = active.find(
+    (asset) => (asset.provider ?? "").toLowerCase() === "snap" && (asset.tipo ?? "").toLowerCase() === "lens"
+  )
+  if (snapLens) {
+    return snapLens
+  }
+
+  const anyLens = active.find((asset) => (asset.tipo ?? "").toLowerCase() === "lens")
+  if (anyLens) {
+    return anyLens
+  }
+
+  return active[0] ?? null
+}
+
+function extractLensIdFromUrl(value?: string | null): string {
+  if (!value) return ""
+  const trimmed = value.trim()
+  if (!trimmed) return ""
+
+  const uuidPattern = /^[0-9a-fA-F-]{32,}$/
+  if (uuidPattern.test(trimmed)) {
+    return trimmed
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    const paramCandidates = ["lensId", "lens_id", "id"]
+    for (const key of paramCandidates) {
+      const candidate = parsed.searchParams.get(key)
+      if (candidate) {
+        const normalized = candidate.trim()
+        if (normalized && uuidPattern.test(normalized)) {
+          return normalized
+        }
+      }
+    }
+
+    const segments = parsed.pathname.split("/").filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+    if (lastSegment && uuidPattern.test(lastSegment)) {
+      return lastSegment
+    }
+  } catch {
+    // ignore
+  }
+
+  return ""
 }

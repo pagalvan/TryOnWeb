@@ -4,6 +4,30 @@ import {
   type Category as CategorySummary,
 } from "@/lib/services/categories"
 
+export type LensAsset = {
+  id: string
+  prenda_id: string
+  tipo: string
+  url: string
+  provider: string | null
+  version: string | null
+  metadata: Record<string, unknown> | null
+  activo: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export type LensAssetInput = {
+  id?: string
+  lensId?: string
+  provider?: string | null
+  tipo?: string | null
+  url?: string | null
+  version?: string | null
+  metadata?: Record<string, unknown> | null
+  activo?: boolean | null
+}
+
 export type InventoryCategory = Pick<CategorySummary, "id" | "nombre">
 
 export type InventoryLocation = {
@@ -24,6 +48,13 @@ export type InventoryItem = {
   bodega?: InventoryLocation | null
 }
 
+export type InventoryProductMetadata = {
+  image_url?: string
+  gallery?: string[]
+  lensId?: string
+  [key: string]: unknown
+}
+
 export type InventoryProduct = {
   id: string
   nombre: string
@@ -33,9 +64,10 @@ export type InventoryProduct = {
   estado: string
   destacado: boolean
   categoria_id: string | null
-  metadata: Record<string, unknown> | null
+  metadata: InventoryProductMetadata | null
   categorias?: InventoryCategory | null
   inventario_items: InventoryItem[]
+  lens_assets?: LensAsset[] | null
 }
 
 export type CreateProductPayload = {
@@ -46,9 +78,10 @@ export type CreateProductPayload = {
   descripcion?: string | null
   estado: string
   destacado: boolean
-  metadata?: Record<string, unknown> | null
+  metadata?: InventoryProductMetadata | null
   stockInicial?: number
   stockLocationId?: string | null
+  lensAsset?: LensAssetInput | null
 }
 
 export type UpdateProductPayload = Partial<Omit<CreateProductPayload, "stockInicial" | "stockLocationId">>

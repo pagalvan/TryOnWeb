@@ -3,17 +3,20 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { productUpdateSchema } from "@/lib/schemas/product"
+import { syncLensAsset } from "../lens-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
   categorias:categoria_id ( id, nombre ),
-  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado )
+  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado ),
+  lens_assets ( id, prenda_id, tipo, url, provider, version, metadata, activo, created_at, updated_at )
 `
 
 const mapProduct = (producto: any) => ({
   ...producto,
   categorias: Array.isArray(producto.categorias) ? producto.categorias[0] ?? null : producto.categorias ?? null,
   inventario_items: producto.inventario_items ?? [],
+  lens_assets: Array.isArray(producto.lens_assets) ? producto.lens_assets : [],
 })
 
 export const runtime = "nodejs"
@@ -55,7 +58,17 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
     return NextResponse.json({ message: "Validación fallida", errors }, { status: 422 })
   }
 
-  const { nombre, sku, categoria_id, valor_unitario, descripcion, estado, destacado, metadata } = result.data
+  const {
+    nombre,
+    sku,
+    categoria_id,
+    valor_unitario,
+    descripcion,
+    estado,
+    destacado,
+    metadata,
+    lensAsset,
+  } = result.data
   const supabase = getSupabaseAdminClient()
 
   const updatePayload: Record<string, any> = {}
@@ -73,6 +86,13 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
   const { error } = await supabase.from("prendas").update(updatePayload).eq("id", id)
   if (error) {
     return NextResponse.json({ message: error.message }, { status: 400 })
+  }
+
+  if (Object.prototype.hasOwnProperty.call(result.data, "lensAsset")) {
+    const { error: lensAssetError } = await syncLensAsset(supabase, id, lensAsset ?? null)
+    if (lensAssetError) {
+      return NextResponse.json({ message: lensAssetError.message ?? "No pudimos sincronizar el Lens" }, { status: 400 })
+    }
   }
 
   const { data } = await supabase

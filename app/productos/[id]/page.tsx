@@ -9,6 +9,7 @@ import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { apiFetch } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -17,6 +18,16 @@ type InventarioItem = {
   id: string
   ubicacion: string
   cantidad: number
+}
+
+type LensAsset = {
+  id: string
+  tipo: string
+  url: string
+  provider: string | null
+  version: string | null
+  metadata: Record<string, unknown> | null
+  activo: boolean
 }
 
 type ProductoDetalle = {
@@ -30,6 +41,7 @@ type ProductoDetalle = {
   sku: string | null
   estado: string
   inventario_items: InventarioItem[]
+  lens_assets?: LensAsset[] | null
 }
 
 export default function ProductoDetallePage() {
@@ -230,6 +242,8 @@ export default function ProductoDetallePage() {
     return producto.inventario_items.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
   }, [producto])
 
+  const hasLens = getProductLensId(producto).length > 0
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -288,7 +302,14 @@ export default function ProductoDetallePage() {
 
           <div>
             <div className="mb-6">
-              <p className="text-muted-foreground mb-2">{producto.categorias?.nombre ?? "Sin categoría"}</p>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="text-muted-foreground">{producto.categorias?.nombre ?? "Sin categoría"}</p>
+                {hasLens ? (
+                  <Badge className="flex items-center gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-500">
+                    <Eye className="h-3 w-3" /> AR disponible
+                  </Badge>
+                ) : null}
+              </div>
               <h1 className="font-display text-4xl font-bold text-foreground mb-4">{producto.nombre}</h1>
               <p className="text-3xl font-bold text-foreground mb-6">{formatCurrency(producto.valor_unitario)}</p>
               <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -297,15 +318,26 @@ export default function ProductoDetallePage() {
             </div>
 
             <div className="flex flex-wrap gap-3 mb-8">
-              <Link
-                href="/probador-virtual"
-                className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
-              >
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              {hasLens ? (
+                <Link
+                  href="/probador-virtual"
+                  className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
+                >
+                  <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Eye className="mr-2 h-5 w-5" />
+                    Probar con AR
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  type="button"
+                  className="flex-1 min-w-[200px] bg-muted text-muted-foreground"
+                  disabled
+                >
                   <Eye className="mr-2 h-5 w-5" />
-                  Probar con AR
+                  AR no disponible
                 </Button>
-              </Link>
+              )}
 
               <Button
                 type="button"
@@ -345,6 +377,11 @@ export default function ProductoDetallePage() {
                 </Button>
               )}
             </div>
+            {!hasLens ? (
+              <p className="-mt-4 mb-6 text-sm text-muted-foreground">
+                Añade un Lens ID desde el inventario para habilitar la prueba en realidad aumentada.
+              </p>
+            ) : null}
 
             {userRole === "admin" && (
               <div className="grid grid-cols-2 gap-4 mb-8">
@@ -375,6 +412,7 @@ export default function ProductoDetallePage() {
               <CardContent>
                 <div className="space-y-3">
                   <Detalle label="Estado" value={producto.estado} />
+                  <Detalle label="Experiencia AR" value={hasLens ? "Disponible" : "No disponible"} />
                   <Detalle label="Categoría" value={producto.categorias?.nombre ?? "Sin categoría"} />
                   <Detalle label="SKU" value={producto.sku ?? "Sin SKU"} />
                   <Detalle label="Ubicaciones" value={producto.inventario_items.map((i) => i.ubicacion).join(", ") || "Sin registros"} />
@@ -400,4 +438,85 @@ function Detalle({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-foreground text-right">{value}</span>
     </div>
   )
+}
+
+function getProductLensId(producto?: ProductoDetalle | null): string {
+  const asset = getPrimaryLensAsset(producto)
+  if (asset) {
+    const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata : null
+    if (metadata) {
+      const candidates = [metadata.lens_id, metadata.lensId, metadata.id]
+      for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim().length > 0) {
+          return candidate.trim()
+        }
+      }
+    }
+
+    const fromUrl = extractLensIdFromUrl(asset.url)
+    if (fromUrl) {
+      return fromUrl
+    }
+  }
+
+  const fallback = typeof producto?.metadata?.lensId === "string" ? producto.metadata.lensId.trim() : ""
+  return fallback
+}
+
+function getPrimaryLensAsset(producto?: ProductoDetalle | null): LensAsset | null {
+  if (!producto) return null
+  const assets = Array.isArray(producto.lens_assets) ? producto.lens_assets : []
+  if (!assets.length) return null
+
+  const active = assets.filter((asset) => asset && asset.activo !== false)
+  if (!active.length) return null
+
+  const snapLens = active.find(
+    (asset) => (asset.provider ?? "").toLowerCase() === "snap" && (asset.tipo ?? "").toLowerCase() === "lens"
+  )
+  if (snapLens) {
+    return snapLens
+  }
+
+  const anyLens = active.find((asset) => (asset.tipo ?? "").toLowerCase() === "lens")
+  if (anyLens) {
+    return anyLens
+  }
+
+  return active[0] ?? null
+}
+
+function extractLensIdFromUrl(value?: string | null): string {
+  if (!value) return ""
+  const trimmed = value.trim()
+  if (!trimmed) return ""
+
+  const uuidPattern = /^[0-9a-fA-F-]{32,}$/
+  if (uuidPattern.test(trimmed)) {
+    return trimmed
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    const paramCandidates = ["lensId", "lens_id", "id"]
+    for (const key of paramCandidates) {
+      const candidate = parsed.searchParams.get(key)
+      if (candidate) {
+        const normalized = candidate.trim()
+        if (normalized && uuidPattern.test(normalized)) {
+          return normalized
+        }
+      }
+    }
+
+    const segments = parsed.pathname.split("/").filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+    if (lastSegment && uuidPattern.test(lastSegment)) {
+      return lastSegment
+    }
+  } catch {
+    // ignore
+  }
+
+  return ""
 }

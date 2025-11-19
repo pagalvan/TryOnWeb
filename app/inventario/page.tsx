@@ -40,8 +40,11 @@ import {
 	type InventoryItem,
 	type InventoryLocation,
 	type InventoryProduct,
+	type InventoryProductMetadata,
 	upsertProductStock as upsertInventoryStock,
 	updateProduct as updateInventoryProduct,
+ 	type LensAsset,
+ 	type LensAssetInput,
 } from "@/lib/services/inventory"
 
 const PRODUCT_STATUS_OPTIONS = [
@@ -68,6 +71,7 @@ type ProductFormState = {
 	estado: string
 	destacado: boolean
 	imageUrl: string
+	lensId: string
 	stockInicial: string
 	bodegaId: string
 }
@@ -204,6 +208,7 @@ export default function InventarioPage() {
 	const abrirModalEditarProducto = (producto: InventoryProduct) => {
 		setProductoEnEdicion(producto)
 		const metadataImageUrl = producto.metadata?.image_url
+		const productLensId = getProductLensId(producto)
 		const primerItem = producto.inventario_items?.[0]
 		const fallbackLocationId =
 			primerItem?.bodega_id ?? primerItem?.bodega?.id ?? locations[0]?.id ?? ""
@@ -217,6 +222,7 @@ export default function InventarioPage() {
 			estado: producto.estado ?? "disponible",
 			destacado: Boolean(producto.destacado),
 			imageUrl: typeof metadataImageUrl === "string" ? metadataImageUrl : "",
+			lensId: productLensId,
 			stockInicial: "0",
 			bodegaId: fallbackLocationId,
 		})
@@ -258,6 +264,8 @@ export default function InventarioPage() {
 		}
 
 		setSavingProduct(true)
+		const metadata = buildProductMetadata(productForm, productoEnEdicion?.metadata ?? null)
+		const lensAsset = buildLensAssetPayload(productForm, productoEnEdicion)
 		const basePayload = {
 			nombre: productForm.nombre.trim(),
 			sku: productForm.sku.trim() || null,
@@ -266,7 +274,8 @@ export default function InventarioPage() {
 			descripcion: productForm.descripcion.trim() || null,
 			estado: productForm.estado,
 			destacado: productForm.destacado,
-			metadata: productForm.imageUrl ? { image_url: productForm.imageUrl.trim() } : null,
+			metadata,
+			lensAsset,
 		}
 
 		try {
@@ -491,6 +500,7 @@ export default function InventarioPage() {
 										const precio = producto.valor_unitario ?? 0
 										const rawImage = producto.metadata?.image_url
 										const imagen = typeof rawImage === "string" && rawImage.length > 0 ? rawImage : "/placeholder.svg"
+										const hasLens = getProductLensId(producto).length > 0
 
 										return (
 											<TableRow key={producto.id} className="hover:bg-muted/30">
@@ -546,7 +556,12 @@ export default function InventarioPage() {
 													</span>
 												</TableCell>
 												<TableCell>
-													<Badge className="bg-success/10 text-success border-success/20 capitalize">{producto.estado}</Badge>
+													<div className="flex items-center gap-2">
+														<Badge className="bg-success/10 text-success border-success/20 capitalize">{producto.estado}</Badge>
+														{hasLens ? (
+															<Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-500">Lens</Badge>
+														) : null}
+													</div>
 												</TableCell>
 												<TableCell className="text-right">
 													<DropdownMenu>
@@ -675,6 +690,7 @@ function getInitialProductForm(options: InitialFormOptions = {}): ProductFormSta
 		estado: "disponible",
 		destacado: false,
 		imageUrl: "",
+		lensId: "",
 		stockInicial: "0",
 		bodegaId: options.locationId ?? "",
 	}
@@ -800,6 +816,16 @@ function ProductDialog({
 					<div className="grid gap-2">
 						<Label>Imagen (URL)</Label>
 						<Input placeholder="https://..." value={productForm.imageUrl} onChange={handleInputChange("imageUrl")} />
+					</div>
+
+					<div className="grid gap-2">
+						<Label>Lens ID (Snap)</Label>
+						<Input
+							placeholder="52e517f6-79f2-438d-9279-02dd6d46b887"
+							value={productForm.lensId}
+							onChange={handleInputChange("lensId")}
+						/>
+						<p className="text-xs text-muted-foreground">Este identificador proviene de Lens Studio y habilita la experiencia AR.</p>
 					</div>
 
 					{!isEditing && (
@@ -1130,5 +1156,149 @@ function LocationDialog({ open, onOpenChange, onCreated }: LocationDialogProps) 
 
 function sortLocations(locations: InventoryLocation[]) {
 	return [...locations].sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }))
+}
+
+function buildProductMetadata(
+	form: ProductFormState,
+	existing: InventoryProductMetadata | null
+): InventoryProductMetadata | null {
+	const metadata: InventoryProductMetadata = { ...(existing ?? {}) }
+	const imageUrl = form.imageUrl.trim()
+
+	if (imageUrl) {
+		metadata.image_url = imageUrl
+	} else {
+		delete metadata.image_url
+	}
+
+	delete metadata.lensId
+
+	return Object.keys(metadata).length > 0 ? metadata : null
+}
+
+function buildLensAssetPayload(form: ProductFormState, producto: InventoryProduct | null): LensAssetInput | null {
+	const lensId = form.lensId.trim()
+	if (lensId.length === 0) {
+		return null
+	}
+
+	const existingAsset = getPrimaryLensAsset(producto)
+	const metadataBase =
+		existingAsset?.metadata && typeof existingAsset.metadata === "object"
+			? { ...existingAsset.metadata }
+			: {}
+	const metadata = { ...metadataBase, lens_id: lensId }
+
+	const payload: LensAssetInput = {
+		lensId,
+		provider: (existingAsset?.provider ?? "snap") || "snap",
+		tipo: (existingAsset?.tipo ?? "lens") || "lens",
+		metadata,
+		activo: existingAsset?.activo ?? true,
+	}
+
+	if (existingAsset?.id) {
+		payload.id = existingAsset.id
+	}
+
+	if (existingAsset?.url) {
+		payload.url = existingAsset.url
+	}
+
+	if (existingAsset?.version) {
+		payload.version = existingAsset.version
+	}
+
+	return payload
+}
+
+function getPrimaryLensAsset(producto?: InventoryProduct | null): LensAsset | null {
+	if (!producto) return null
+	const assets = Array.isArray(producto.lens_assets) ? producto.lens_assets : []
+	if (!assets.length) return null
+
+	const activeAssets = assets.filter((asset) => asset && asset.activo !== false)
+	if (!activeAssets.length) return null
+
+	const findBy = (predicate: (asset: LensAsset) => boolean) =>
+		activeAssets.find((asset) => {
+			try {
+				return predicate(asset)
+			} catch {
+				return false
+			}
+		})
+
+	const snapLens = findBy((asset) =>
+		(asset.provider ?? "").toLowerCase() === "snap" && (asset.tipo ?? "").toLowerCase() === "lens"
+	)
+	if (snapLens) {
+		return snapLens
+	}
+
+	const genericLens = findBy((asset) => (asset.tipo ?? "").toLowerCase() === "lens")
+	if (genericLens) {
+		return genericLens
+	}
+
+	return activeAssets[0] ?? null
+}
+
+function getProductLensId(producto?: InventoryProduct | null): string {
+	const asset = getPrimaryLensAsset(producto)
+	if (asset) {
+		const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata : null
+		if (metadata) {
+			const candidates = [metadata.lens_id, metadata.lensId, metadata.id]
+			for (const candidate of candidates) {
+				if (typeof candidate === "string" && candidate.trim().length > 0) {
+					return candidate.trim()
+				}
+			}
+		}
+
+		const fromUrl = extractLensIdFromUrl(asset.url)
+		if (fromUrl) {
+			return fromUrl
+		}
+	}
+
+	const fallback = typeof producto?.metadata?.lensId === "string" ? producto.metadata.lensId.trim() : ""
+	return fallback
+}
+
+function extractLensIdFromUrl(value?: string | null): string {
+	if (!value) return ""
+	const trimmed = value.trim()
+	if (!trimmed) return ""
+
+	const uuidPattern = /^[0-9a-fA-F-]{32,}$/
+	if (uuidPattern.test(trimmed)) {
+		return trimmed
+	}
+
+	try {
+		const parsed = new URL(trimmed)
+		const paramCandidates = ["lensId", "lens_id", "id"]
+		for (const key of paramCandidates) {
+			const candidate = parsed.searchParams.get(key)
+			if (candidate) {
+				const normalized = candidate.trim()
+				if (normalized && uuidPattern.test(normalized)) {
+					return normalized
+				}
+			}
+		}
+
+		const segments = parsed.pathname.split("/").filter(Boolean)
+		const lastSegment = segments[segments.length - 1]
+		if (lastSegment && uuidPattern.test(lastSegment)) {
+			return lastSegment
+		}
+	} catch {
+		// noop - not a valid URL
+	}
+
+	return ""
 }
 
