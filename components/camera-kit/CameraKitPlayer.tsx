@@ -70,6 +70,7 @@ export function CameraKitPlayer({
   const mediaStreamRef = useRef<MediaStream | null>(null)
 
   const [bootstrapping, setBootstrapping] = useState(true)
+  const [sessionReady, setSessionReady] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [lensStatus, setLensStatus] = useState<LensStatus>("idle")
   const [lensError, setLensError] = useState<string | null>(null)
@@ -81,6 +82,7 @@ export function CameraKitPlayer({
       if (!canvasRef.current) return
 
       setBootstrapping(true)
+      setSessionReady(false)
       setCameraError(null)
 
       try {
@@ -138,6 +140,7 @@ export function CameraKitPlayer({
         mediaStreamRef.current = mediaStream
 
         setBootstrapping(false)
+        setSessionReady(true)
         onReady?.()
       } catch (error) {
         if (isCancelled) return
@@ -157,6 +160,7 @@ export function CameraKitPlayer({
 
     return () => {
       isCancelled = true
+      setSessionReady(false)
 
       const session = sessionRef.current
       session?.pause?.()
@@ -182,7 +186,7 @@ export function CameraKitPlayer({
 
   useEffect(() => {
     const applyLens = async () => {
-      if (!lensId || !sessionRef.current || !cameraKitRef.current) {
+      if (!lensId || !sessionReady || !sessionRef.current || !cameraKitRef.current) {
         setLensStatus("idle")
         setLensError(null)
         return
@@ -193,19 +197,75 @@ export function CameraKitPlayer({
 
       try {
         const lensRepository = cameraKitRef.current.lensRepository
-        if (lensGroupId && typeof lensRepository.loadLensGroups === "function") {
-          await lensRepository.loadLensGroups([lensGroupId])
+        let lens: unknown = null
+        const loadErrors: Error[] = []
+
+        const recordError = (error: unknown) => {
+          const normalized = error instanceof Error ? error : new Error(String(error))
+          loadErrors.push(normalized)
+          console.error("[CameraKit] loadLens error", normalized)
         }
 
-        let lens: unknown = null
-        if (typeof lensRepository.loadLens === "function") {
-          lens = await lensRepository.loadLens({ lensId, groupId: lensGroupId })
-        } else if (typeof lensRepository.findLensById === "function") {
-          lens = await lensRepository.findLensById(lensId)
+        const loadLensFn = lensRepository.loadLens
+        if (typeof loadLensFn === "function") {
+          const callLoadLens = async (useGroup: boolean) => {
+            if (useGroup && !lensGroupId) {
+              return false
+            }
+            try {
+              const args = useGroup ? [lensId, lensGroupId] : [lensId]
+              const result = await (loadLensFn as (...args: unknown[]) => Promise<unknown>).apply(
+                lensRepository,
+                args
+              )
+              if (result) {
+                lens = result
+                return true
+              }
+            } catch (error) {
+              recordError(error)
+            }
+            return false
+          }
+
+          if (lensGroupId) {
+            await callLoadLens(true)
+          }
+          if (!lens) {
+            await callLoadLens(false)
+          }
+        }
+
+        if (!lens && typeof lensRepository.findLensById === "function") {
+          try {
+            lens = await lensRepository.findLensById(lensId)
+          } catch (error) {
+            recordError(error)
+          }
+        }
+
+        if (!lens && lensGroupId && typeof lensRepository.loadLensGroups === "function") {
+          try {
+            const result = await lensRepository.loadLensGroups([lensGroupId])
+            const lenses = Array.isArray((result as any)?.lenses) ? (result as any).lenses : []
+            lens =
+              lenses.find((candidate: any) => {
+                const candidateId = candidate?.id ?? candidate?.lensId ?? candidate?.metadata?.lensId
+                return typeof candidateId === "string" && candidateId.trim() === lensId
+              }) ?? null
+          } catch (error) {
+            recordError(error)
+          }
         }
 
         if (!lens) {
-          throw new Error("No encontramos el lente solicitado")
+          const friendlyMessage = lensGroupId
+            ? `No pudimos cargar el Lens ${lensId}. Verifica que pertenezca al Lens Group configurado.`
+            : `No pudimos cargar el Lens ${lensId}. Revisa que el ID exista en Camera Kit.`
+          if (loadErrors.length === 0) {
+            throw new Error(friendlyMessage)
+          }
+          throw new Error(`${friendlyMessage} Detalle: ${loadErrors[loadErrors.length - 1].message}`)
         }
 
         const session = sessionRef.current
@@ -228,13 +288,13 @@ export function CameraKitPlayer({
     }
 
     applyLens()
-  }, [lensGroupId, lensId, onError])
+  }, [lensGroupId, lensId, onError, sessionReady])
 
   const shouldShowOverlay = bootstrapping || Boolean(cameraError) || lensStatus === "loading" || Boolean(lensError)
 
   return (
     <div className={className} style={style}>
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-black">
+      <div className="relative w-full h-full min-h-[240px] overflow-hidden rounded-xl bg-black">
         <canvas ref={canvasRef} className="h-full w-full" aria-hidden={false} />
         {shouldShowOverlay ? (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/70 px-6 text-center text-sm text-white">

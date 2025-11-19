@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { apiFetch } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { CameraKitPlayer } from "@/components/camera-kit/CameraKitPlayer"
+import { getCameraKitToken, CAMERA_KIT_DEFAULT_LENS_GROUP_ID } from "@/lib/camera-kit"
 
 type InventarioItem = {
   id: string
@@ -55,7 +57,13 @@ export default function ProductoDetallePage() {
   const [shareLoading, setShareLoading] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
   const viewLoggedRef = useRef(false)
+  const mediaRef = useRef<HTMLDivElement | null>(null)
+  const [arActive, setArActive] = useState(false)
+  const [cameraFacing, setCameraFacing] = useState<"user" | "environment">("user")
   const { toast } = useToast()
+
+  const cameraToken = getCameraKitToken()
+  const lensGroupId = CAMERA_KIT_DEFAULT_LENS_GROUP_ID
 
   const productoId = params?.id
 
@@ -134,6 +142,8 @@ export default function ProductoDetallePage() {
     setIsFavorited(false)
     setFavoriteLoading(false)
     setShareLoading(false)
+    setArActive(false)
+    setCameraFacing("user")
   }, [productoId])
 
   useEffect(() => {
@@ -242,7 +252,43 @@ export default function ProductoDetallePage() {
     return producto.inventario_items.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
   }, [producto])
 
-  const hasLens = getProductLensId(producto).length > 0
+  const lensId = useMemo(() => getProductLensId(producto), [producto])
+  const hasLens = lensId.length > 0
+
+  useEffect(() => {
+    if (!hasLens && arActive) {
+      setArActive(false)
+    }
+  }, [arActive, hasLens])
+
+  const canActivateAr = hasLens && Boolean(cameraToken)
+  const showCameraPlayer = arActive && Boolean(cameraToken) && lensId.length > 0
+
+  const scrollToMedia = () => {
+    if (typeof window === "undefined") return
+    window.requestAnimationFrame(() => {
+      mediaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }
+
+  const handleStartAr = () => {
+    if (!canActivateAr) return
+    setArActive(true)
+    scrollToMedia()
+  }
+
+  const handleStopAr = () => {
+    setArActive(false)
+  }
+
+  const handlePlayerError = (error: Error) => {
+    setArActive(false)
+    toast({
+      title: "No pudimos iniciar la cámara",
+      description: error.message,
+      variant: "destructive",
+    })
+  }
 
   if (loading) {
     return (
@@ -285,9 +331,26 @@ export default function ProductoDetallePage() {
         </Link>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          <div>
+          <div ref={mediaRef}>
             <div className="aspect-square bg-accent rounded-2xl overflow-hidden mb-4 relative">
-              <Image src={producto.metadata?.image_url || "/placeholder.svg"} alt={producto.nombre} fill className="object-cover" />
+              {showCameraPlayer ? (
+                <CameraKitPlayer
+                  key={`${producto.id}-hero-${cameraFacing}`}
+                  apiToken={cameraToken}
+                  lensId={lensId}
+                  lensGroupId={lensGroupId}
+                  cameraFacing={cameraFacing}
+                  onError={handlePlayerError}
+                  className="h-full w-full"
+                />
+              ) : (
+                <Image
+                  src={producto.metadata?.image_url || "/placeholder.svg"}
+                  alt={producto.nombre}
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
             {producto.metadata?.gallery?.length ? (
               <div className="grid grid-cols-4 gap-4">
@@ -319,15 +382,15 @@ export default function ProductoDetallePage() {
 
             <div className="flex flex-wrap gap-3 mb-8">
               {hasLens ? (
-                <Link
-                  href="/probador-virtual"
+                <Button
+                  type="button"
                   className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
+                  onClick={arActive ? handleStopAr : handleStartAr}
+                  disabled={!canActivateAr}
                 >
-                  <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                    <Eye className="mr-2 h-5 w-5" />
-                    Probar con AR
-                  </Button>
-                </Link>
+                  <Eye className="mr-2 h-5 w-5" />
+                  {arActive ? "Cerrar AR" : "Probar con AR"}
+                </Button>
               ) : (
                 <Button
                   type="button"
@@ -421,6 +484,7 @@ export default function ProductoDetallePage() {
             </Card>
           </div>
         </div>
+
       </main>
     </div>
   )

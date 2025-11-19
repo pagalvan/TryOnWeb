@@ -20,7 +20,9 @@ declare module "@snap/camera-kit" {
 
   export interface CameraKitLensRepository {
     loadLensGroups?: (groupIds: string[]) => Promise<unknown>
-    loadLens?: (options: { lensId: string; groupId?: string }) => Promise<unknown>
+    loadLens?:
+      | ((lensId: string, groupId?: string) => Promise<unknown>)
+      | ((options: { lensId: string; groupId?: string }) => Promise<unknown>)
     findLensById?: (lensId: string) => Promise<unknown>
   }
 
