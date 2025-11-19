@@ -3,13 +3,14 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState, type ChangeEvent } from "react"
-import { Loader2, Plus, Search, Sparkles, Star, TrendingUp } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Search, Sparkles, Star, TrendingUp } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
 import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 type Categoria = {
   id: string
@@ -70,6 +71,19 @@ export default function ProductosPage() {
   }
 
   const categoriasFiltro = useMemo(() => ["Todos", ...categorias.map((c) => c.nombre)], [categorias])
+  const MAX_VISIBLE_CATEGORIES = 5
+  const categoriasVisibles = useMemo(
+    () => categoriasFiltro.slice(0, MAX_VISIBLE_CATEGORIES),
+    [categoriasFiltro]
+  )
+  const categoriasOcultas = useMemo(
+    () => categoriasFiltro.slice(MAX_VISIBLE_CATEGORIES),
+    [categoriasFiltro]
+  )
+  const categoriaOcultaSeleccionada = useMemo(
+    () => categoriasOcultas.includes(selectedCategory),
+    [categoriasOcultas, selectedCategory]
+  )
 
   const productosFiltrados = useMemo(() => {
     const query = searchValue.trim().toLowerCase()
@@ -142,7 +156,7 @@ export default function ProductosPage() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-3">
-            {categoriasFiltro.map((categoria, index) => (
+            {categoriasVisibles.map((categoria, index) => (
               <button
                 key={categoria}
                 onClick={() => setSelectedCategory(categoria)}
@@ -161,6 +175,36 @@ export default function ProductosPage() {
                 <span className="relative z-10">{categoria}</span>
               </button>
             ))}
+            {categoriasOcultas.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`relative px-6 py-3 rounded-full font-medium text-sm transition-all duration-300 hover:scale-105 border-border hover:border-primary/50 hover:shadow-md bg-card text-foreground flex items-center gap-2 ${
+                      categoriaOcultaSeleccionada ? "bg-primary text-primary-foreground shadow-lg" : ""
+                    }`}
+                  >
+                    <span className="relative z-10 flex items-center gap-2">
+                      Ver más
+                      <ChevronDown className="h-4 w-4" />
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[12rem]">
+                  {categoriasOcultas.map((categoria) => (
+                    <DropdownMenuItem
+                      key={categoria}
+                      onSelect={() => {
+                        setSelectedCategory(categoria)
+                      }}
+                      className={selectedCategory === categoria ? "bg-primary/10 text-primary" : ""}
+                    >
+                      {categoria}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 

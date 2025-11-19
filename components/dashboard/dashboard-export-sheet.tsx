@@ -71,8 +71,6 @@ export type DashboardExportData = {
   tryOnTrend: Array<{ label: string; sessions: number; items: number }>
   topProducts: Array<{ label: string; tryons: string; favorites: string; shares: string; totalInteractions: number }>
   lowStock: Array<{ label: string; stock: string; minimum: string; status: string }>
-  profitSeries: SeriesPoint[]
-  transactionsSeries: SeriesPoint[]
   audienceSeries: Array<{ label: string; views: number; tryons: number }>
   inventoryStatus: Array<{ label: string; value: number }>
   inventoryHealthPercent: number
@@ -103,8 +101,6 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
     tryOnTrend,
     topProducts,
     lowStock,
-    profitSeries,
-    transactionsSeries,
     audienceSeries,
     inventoryStatus,
     inventoryHealthPercent,
@@ -179,16 +175,7 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
         ))}
       </section>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-2">
-        <MetricLineCard
-          title="Profit del periodo"
-          subtitle="Seguimiento diario de ingresos netos proyectados."
-          badge="Semana actual"
-          deltaLabel={formatDeltaLabel(profitSeries)}
-          gradient="from-[#fdf2ff] to-[#e9ddff]"
-          accent="#a855f7"
-          series={profitSeries}
-        />
+      <section className="mt-6">
         <AudienceCard
           title="Audiencia del probador"
           subtitle="Curvas comparativas de views y try-ons."
@@ -197,7 +184,7 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
         />
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
+      <section className="mt-6 grid gap-4 lg:grid-cols-2">
         <FeedbackCard
           title="Feedback inventario"
           subtitle="Estado global de existencias por criticidad."
@@ -205,15 +192,6 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
           total={statusTotal}
         />
         <ChannelCard traffic={traffic} total={trafficTotal} />
-        <MetricLineCard
-          title="Transacciones totales"
-          subtitle="Comparativo semanal con costos asociados."
-          badge="Exportar"
-          deltaLabel={formatDeltaLabel(transactionsSeries)}
-          gradient="from-[#e0fbff] to-[#c7f3ff]"
-          accent="#0ea5e9"
-          series={transactionsSeries}
-        />
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -253,54 +231,6 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
       </section>
 
       {notes ? <div className="mt-6 text-xs text-slate-500">{notes}</div> : null}
-    </div>
-  )
-}
-
-function formatDeltaLabel(series: SeriesPoint[]) {
-  if (series.length < 2) return "—"
-  const prev = series[series.length - 2]?.value ?? 0
-  const last = series[series.length - 1]?.value ?? 0
-  if (!Number.isFinite(prev) || prev === 0) return "—"
-  const change = ((last - prev) / Math.abs(prev)) * 100
-  const sign = change >= 0 ? "+" : ""
-  return `${sign}${change.toFixed(1)}% vs periodo anterior`
-}
-
-type MetricLineCardProps = {
-  title: string
-  subtitle: string
-  badge?: string
-  deltaLabel?: string
-  gradient: string
-  accent: string
-  series: SeriesPoint[]
-}
-
-function MetricLineCard({ title, subtitle, badge, deltaLabel, gradient, accent, series }: MetricLineCardProps) {
-  const formatter = new Intl.NumberFormat("es-CO")
-  const currentValue = series.length > 0 ? formatter.format(Math.round(series[series.length - 1].value)) : "0"
-  return (
-    <div className={`rounded-[32px] border border-white/70 bg-gradient-to-b ${gradient} p-6 shadow-xl`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <p className="text-xs text-slate-600">{subtitle}</p>
-        </div>
-        <div className="flex flex-col items-end text-xs text-slate-600">
-          {badge ? <span className="rounded-full bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]">{badge}</span> : null}
-          {deltaLabel ? <span className="mt-2 text-emerald-600">{deltaLabel}</span> : null}
-        </div>
-      </div>
-      <div className="mt-6 text-4xl font-semibold text-slate-900">{currentValue}</div>
-      <div className="mt-4 rounded-3xl border border-white/60 bg-white/50 p-4">
-        <SingleLineChart series={series} accent={accent} />
-      </div>
-      <div className="mt-2 flex justify-between text-[10px] uppercase tracking-[0.3em] text-slate-500">
-        {series.map((point) => (
-          <span key={point.label}>{point.label}</span>
-        ))}
-      </div>
     </div>
   )
 }

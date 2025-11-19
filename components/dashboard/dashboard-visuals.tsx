@@ -4,22 +4,13 @@ import { useMemo } from "react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
-import type { DemandTrendPoint, InventoryFlowPoint, ProductTrafficItem, TryOnStats } from "@/lib/types/analytics"
+import type { DemandTrendPoint, ProductTrafficItem, TryOnStats } from "@/lib/types/analytics"
 
 const formatNumber = (value: number) => new Intl.NumberFormat("es-CO").format(value)
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(value)
-
 const dayShortFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "short" })
-const dayLongFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "long" })
 
 const FEEDBACK_FALLBACK = [
   { key: "positive", name: "Disponible", value: 60 },
@@ -31,7 +22,6 @@ type TrafficPalette = Record<string, { bg: string; text: string }>
 
 type DashboardVisualsProps = {
   panelClass: string
-  inventoryFlowData: InventoryFlowPoint[]
   demandTrendData: DemandTrendPoint[]
   productTrafficData: ProductTrafficItem[]
   totalProducts: number
@@ -43,7 +33,6 @@ type DashboardVisualsProps = {
 
 export function DashboardVisuals({
   panelClass,
-  inventoryFlowData,
   demandTrendData,
   productTrafficData,
   totalProducts,
@@ -52,20 +41,6 @@ export function DashboardVisuals({
   trafficPalette,
   tryOnSummary,
 }: DashboardVisualsProps) {
-  const profitChartData = useMemo(() => {
-    return inventoryFlowData.slice(0, 7).map((point) => {
-      const date = new Date(point.date)
-      const netValue = Math.max(0, point.inbound - point.outbound * 0.35)
-      return {
-        day: dayShortFormatter.format(date).toUpperCase(),
-        label: dayLongFormatter.format(date),
-        value: Math.round(netValue),
-      }
-    })
-  }, [inventoryFlowData])
-
-  const maxProfitValue = profitChartData.reduce((acc, item) => Math.max(acc, item.value), 0)
-
   const audienceLineData = useMemo(() => {
     return demandTrendData.map((point) => {
       const date = new Date(point.date)
@@ -77,18 +52,6 @@ export function DashboardVisuals({
       }
     })
   }, [demandTrendData])
-
-  const stackedTransactions = useMemo(() => {
-    return inventoryFlowData.slice(0, 7).map((point) => {
-      const date = new Date(point.date)
-      return {
-        day: dayShortFormatter.format(date).toUpperCase(),
-        thisWeek: point.inbound,
-        lastWeek: Math.max(0, Math.round(point.outbound * 0.85)),
-        cost: Math.max(0, Math.round(point.outbound * 0.6)),
-      }
-    })
-  }, [inventoryFlowData])
 
   const stockHealthy = Math.max(totalProducts - lowStockProducts, 0)
   const stockWarning = Math.max(lowStockProducts - criticalAlerts, 0)
@@ -242,43 +205,7 @@ export function DashboardVisuals({
 
       <section className="grid gap-6 xl:grid-cols-12">
         <Card
-          className={`${panelClass} xl:col-span-5`}
-          style={{ background: "linear-gradient(135deg, #f3e8ff 0%, #e1d0ff 100%)" }}
-        >
-          <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Profit del periodo</CardTitle>
-              <CardDescription className="text-sm text-slate-600">
-                Seguimiento diario de ingresos netos proyectados.
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="rounded-full border-transparent bg-white/80 text-slate-900">
-              Semana actual
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4 px-6 pb-6">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-slate-900">{formatCurrency(maxProfitValue)}</span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-600">+12% vs ayer</span>
-            </div>
-            <ChartContainer className="h-[220px]" config={{ profit: { label: "Ingresos", color: "#4f46e5" } }}>
-              <BarChart data={profitChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-200" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} width={32} />
-                <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: "rgba(99,102,241,0.08)" }} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#4f46e5">
-                  {profitChartData.map((entry, index) => (
-                    <Cell key={entry.day} fill={index === 2 ? "#22c55e" : "#4f46e5"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`${panelClass} xl:col-span-7`}
+          className={`${panelClass} xl:col-span-12`}
           style={{ background: "linear-gradient(135deg, #dbeafe 0%, #c7d2fe 100%)" }}
         >
           <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
@@ -324,7 +251,7 @@ export function DashboardVisuals({
 
       <section className="grid gap-6 xl:grid-cols-12">
         <Card
-          className={`${panelClass} xl:col-span-4`}
+          className={`${panelClass} xl:col-span-6`}
           style={{ background: "linear-gradient(135deg, #ffe0f1 0%, #ffd1ea 100%)" }}
         >
           <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
@@ -379,7 +306,7 @@ export function DashboardVisuals({
         </Card>
 
         <Card
-          className={`${panelClass} xl:col-span-4`}
+          className={`${panelClass} xl:col-span-6`}
           style={{ background: "linear-gradient(135deg, #fff4d7 0%, #ffe6a7 100%)" }}
         >
           <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
@@ -410,40 +337,6 @@ export function DashboardVisuals({
           </CardContent>
         </Card>
 
-        <Card
-          className={`${panelClass} xl:col-span-4`}
-          style={{ background: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)" }}
-        >
-          <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Transacciones totales</CardTitle>
-              <CardDescription className="text-sm text-slate-600">Comparativo semanal con costos asociados.</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" className="rounded-full border-slate-200 text-xs">
-              Exportar
-            </Button>
-          </CardHeader>
-          <CardContent className="px-6 pb-6 overflow-hidden">
-            <ChartContainer
-              className="h-[230px] w-full max-w-full min-w-0 overflow-hidden aspect-auto"
-              config={{
-                thisWeek: { label: "Esta semana", color: "#22c55e" },
-                lastWeek: { label: "Semana pasada", color: "#3b82f6" },
-                cost: { label: "Costo", color: "#f87171" },
-              }}
-            >
-              <BarChart data={stackedTransactions} margin={{ top: 8, right: 8, left: 0, bottom: 18 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-200" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} width={32} />
-                <RechartsTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="thisWeek" stackId="a" radius={[6, 6, 0, 0]} fill="var(--color-thisWeek)" />
-                <Bar dataKey="lastWeek" stackId="a" fill="var(--color-lastWeek)" />
-                <Bar dataKey="cost" stackId="a" fill="var(--color-cost)" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
       </section>
     </>
   )

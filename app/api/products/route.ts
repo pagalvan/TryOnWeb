@@ -3,11 +3,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { productPayloadSchema } from "@/lib/schemas/product"
+import { resolveInventoryLocation } from "./location-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
   categorias:categoria_id ( id, nombre ),
-  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado )
+  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado, bodega_id )
 `
 
 const mapProduct = (producto: any) => ({
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
     destacado,
     metadata,
     stockInicial,
+    stockLocationId,
     ubicacion,
   } = result.data
 
@@ -85,13 +87,30 @@ export async function POST(request: NextRequest) {
   }
 
   if (stockInicial > 0) {
-    await supabase.from("inventario_items").insert({
+    const targetLocation = await resolveInventoryLocation(supabase, {
+      locationId: stockLocationId,
+      locationName: ubicacion,
+    })
+
+    if (!targetLocation) {
+      return NextResponse.json(
+        { message: "No pudimos determinar la bodega para el stock inicial" },
+        { status: 400 }
+      )
+    }
+
+    const { error: stockError } = await supabase.from("inventario_items").insert({
       prenda_id: data.id,
-      ubicacion,
+      ubicacion: targetLocation.nombre,
+      bodega_id: targetLocation.id,
       cantidad: stockInicial,
       cantidad_minima: 0,
       estado: "ok",
     })
+
+    if (stockError) {
+      return NextResponse.json({ message: stockError.message }, { status: 400 })
+    }
   }
 
   const { data: refreshed } = await supabase

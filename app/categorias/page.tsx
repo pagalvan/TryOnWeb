@@ -11,6 +11,14 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Shirt,
+  Sparkles,
+  ShoppingBag,
+  Gem,
+  Watch,
+  Palette,
+  Tag,
+  type LucideIcon,
 } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -37,12 +45,37 @@ import {
   type Category,
 } from "@/lib/services/categories"
 
+type IconOption = {
+  value: string
+  label: string
+  icon: LucideIcon
+}
+
+const CATEGORY_ICON_OPTIONS: IconOption[] = [
+  { value: "Shirt", label: "Prendas", icon: Shirt },
+  { value: "ShoppingBag", label: "Accesorios", icon: ShoppingBag },
+  { value: "Gem", label: "Joyas", icon: Gem },
+  { value: "Watch", label: "Relojes", icon: Watch },
+  { value: "Palette", label: "Arte y diseño", icon: Palette },
+  { value: "Sparkles", label: "Destacados", icon: Sparkles },
+  { value: "Tag", label: "Ofertas", icon: Tag },
+]
+
+type IconValue = (typeof CATEGORY_ICON_OPTIONS)[number]["value"]
+
+const CATEGORY_ICON_MAP: Record<IconValue, LucideIcon> = CATEGORY_ICON_OPTIONS.reduce(
+  (acc, option) => {
+    return { ...acc, [option.value]: option.icon }
+  },
+  {} as Record<IconValue, LucideIcon>
+)
+
 type CategoryFormState = {
   id: string | null
   nombre: string
   descripcion: string
   estado: "activa" | "inactiva"
-  icon: string
+  icon: IconValue | ""
 }
 
 const STATUS_OPTIONS = [
@@ -76,6 +109,11 @@ export default function CategoriasPage() {
   const [saving, setSaving] = useState(false)
 
   const isEditing = useMemo(() => formState.id !== null, [formState.id])
+  const selectedIconOption = useMemo(
+    () => CATEGORY_ICON_OPTIONS.find((option) => option.value === formState.icon) ?? null,
+    [formState.icon]
+  )
+  const SelectedIcon = selectedIconOption?.icon ?? null
 
   const loadCategories = useCallback(async () => {
     setLoading(true)
@@ -105,7 +143,10 @@ export default function CategoriasPage() {
       nombre: category.nombre,
       descripcion: category.descripcion ?? "",
       estado: category.estado,
-      icon: category.icon ?? "",
+      icon:
+        category.icon && CATEGORY_ICON_MAP[category.icon as IconValue]
+          ? (category.icon as IconValue)
+          : "",
     })
     setDialogOpen(true)
   }
@@ -126,12 +167,12 @@ export default function CategoriasPage() {
 
     setSaving(true)
     const descripcion = formState.descripcion.trim()
-    const icon = formState.icon.trim()
+    const icon = formState.icon
     const payload = {
       nombre: formState.nombre,
       descripcion: descripcion.length > 0 ? descripcion : undefined,
       estado: formState.estado,
-      icon: icon.length > 0 ? icon : undefined,
+      icon: icon && icon.length > 0 ? icon : undefined,
     }
 
     try {
@@ -203,13 +244,16 @@ export default function CategoriasPage() {
             {categorias.map((categoria, index) => {
               const colorClass = COLOR_CLASSES[index % COLOR_CLASSES.length]
               const isActive = categoria.estado === "activa"
+              const IconComponent = categoria.icon
+                ? CATEGORY_ICON_MAP[categoria.icon as IconValue]
+                : undefined
 
               return (
                 <Card key={categoria.id} className="hover:shadow-lg transition-all group">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className={`h-12 w-12 rounded-xl ${colorClass} flex items-center justify-center text-white text-xl`}>
-                        {categoria.icon ? categoria.icon : <Package className="h-6 w-6" />}
+                        {IconComponent ? <IconComponent className="h-6 w-6" /> : <Package className="h-6 w-6" />}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -315,14 +359,36 @@ export default function CategoriasPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="icono">Icono (emoji o texto corto)</Label>
-                <Input
-                  id="icono"
-                  maxLength={4}
+                <Label>Icono</Label>
+                <Select
                   value={formState.icon}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, icon: event.target.value }))}
-                  placeholder="Ej: 🎯"
-                />
+                  onValueChange={(value: IconValue) => setFormState((prev) => ({ ...prev, icon: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un icono" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_ICON_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <span className="flex items-center gap-2">
+                          <option.icon className="h-4 w-4" />
+                          {option.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  Vista previa:
+                  {SelectedIcon ? (
+                    <>
+                      <SelectedIcon className="h-4 w-4" />
+                      <span>{selectedIconOption?.label}</span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground/80">Selecciona un icono para esta categoría</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
