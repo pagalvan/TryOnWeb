@@ -6,12 +6,11 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, P
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
-import type { DemandTrendPoint, InventoryFlowPoint, ProductTrafficItem, TryOnStats } from "@/lib/types/analytics"
+import type { DemandTrendPoint, ProductTrafficItem, TryOnStats } from "@/lib/types/analytics"
 
 const formatNumber = (value: number) => new Intl.NumberFormat("es-CO").format(value)
 
 const dayShortFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "short" })
-const dayLongFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "long" })
 
 const FEEDBACK_FALLBACK = [
   { key: "positive", name: "Disponible", value: 60 },
@@ -23,7 +22,6 @@ type TrafficPalette = Record<string, { bg: string; text: string }>
 
 type DashboardVisualsProps = {
   panelClass: string
-  inventoryFlowData: InventoryFlowPoint[]
   demandTrendData: DemandTrendPoint[]
   productTrafficData: ProductTrafficItem[]
   totalProducts: number
@@ -35,7 +33,6 @@ type DashboardVisualsProps = {
 
 export function DashboardVisuals({
   panelClass,
-  inventoryFlowData,
   demandTrendData,
   productTrafficData,
   totalProducts,

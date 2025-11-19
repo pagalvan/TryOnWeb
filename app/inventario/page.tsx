@@ -103,7 +103,7 @@ export default function InventarioPage() {
 	const [productForm, setProductForm] = useState<ProductFormState>(getInitialProductForm())
 	const [stockForm, setStockForm] = useState<StockFormState>(getInitialStockForm())
 	const [locationDialogOpen, setLocationDialogOpen] = useState(false)
-	const [locationDialogContext, setLocationDialogContext] = useState<{ onCreated?: (location: InventoryLocation) => void } | null>(null)
+	const [, setLocationDialogContext] = useState<{ onCreated?: (location: InventoryLocation) => void } | null>(null)
 
 	const fetchData = useCallback(async () => {
 		setLoading(true)

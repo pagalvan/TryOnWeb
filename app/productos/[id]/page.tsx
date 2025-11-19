@@ -2,14 +2,16 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Edit, Eye, Loader2 } from "lucide-react"
+import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2 } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiFetch } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 type InventarioItem = {
   id: string
@@ -36,6 +38,12 @@ export default function ProductoDetallePage() {
   const [producto, setProducto] = useState<ProductoDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
+  const viewLoggedRef = useRef(false)
+  const { toast } = useToast()
 
   const productoId = params?.id
 
@@ -44,6 +52,38 @@ export default function ProductoDetallePage() {
       setUserRole(localStorage.getItem("userRole"))
     }
   }, [])
+
+  const registerEvent = useCallback(
+    async (eventType: "view" | "share", metadata?: Record<string, unknown>) => {
+      if (!productoId) return
+
+      await apiFetch(`/api/product-events`, {
+        method: "POST",
+        body: JSON.stringify({
+          productId: productoId,
+          eventType,
+          metadata,
+        }),
+      })
+    },
+    [productoId],
+  )
+
+  const refreshFavorite = useCallback(async () => {
+    if (!productoId) {
+      setIsFavorited(false)
+      return
+    }
+
+    try {
+      const response = await apiFetch<{ favorited: boolean }>(`/api/products/${productoId}/favorite`)
+      setIsFavorited(Boolean(response?.favorited))
+    } catch (error) {
+      if (error instanceof Error && /(No autorizado|Permisos insuficientes)/i.test(error.message)) {
+        setIsFavorited(false)
+      }
+    }
+  }, [productoId])
 
   useEffect(() => {
     if (!productoId) return
@@ -57,6 +97,7 @@ export default function ProductoDetallePage() {
         } else {
           setProducto(response.data)
           setError(null)
+          await refreshFavorite()
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "No pudimos cargar el producto"
@@ -68,7 +109,121 @@ export default function ProductoDetallePage() {
     }
 
     fetchProducto()
+  }, [productoId, refreshFavorite])
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && productoId) {
+      setShareUrl(`${window.location.origin}/productos/${productoId}`)
+    }
   }, [productoId])
+
+  useEffect(() => {
+    viewLoggedRef.current = false
+    setIsFavorited(false)
+    setFavoriteLoading(false)
+    setShareLoading(false)
+  }, [productoId])
+
+  useEffect(() => {
+    if (!producto || !productoId || viewLoggedRef.current) {
+      return
+    }
+
+    viewLoggedRef.current = true
+    registerEvent("view").catch(() => {
+      viewLoggedRef.current = false
+    })
+  }, [producto, productoId, registerEvent])
+
+  const handleFavorite = useCallback(async () => {
+    if (favoriteLoading) {
+      return
+    }
+
+    try {
+      setFavoriteLoading(true)
+      if (!productoId) {
+        throw new Error("Producto inválido")
+      }
+
+      if (isFavorited) {
+        await apiFetch(`/api/products/${productoId}/favorite`, { method: "DELETE" })
+        setIsFavorited(false)
+        toast({ title: "Favorito eliminado", description: "Ya no seguirá en tu lista." })
+      } else {
+        await apiFetch(`/api/products/${productoId}/favorite`, { method: "POST" })
+        setIsFavorited(true)
+        toast({ title: "Producto guardado", description: "Lo tendrás presente en tus métricas." })
+      }
+    } catch (error) {
+      if (error instanceof Error && /(No autorizado|Permisos insuficientes)/i.test(error.message)) {
+        toast({ title: "Inicia sesión", description: "Necesitas iniciar sesión para administrar favoritos." })
+        return
+      }
+
+      toast({
+        title: "No pudimos guardar",
+        description: error instanceof Error ? error.message : "Intenta nuevamente en unos segundos.",
+        variant: "destructive",
+      })
+    } finally {
+      setFavoriteLoading(false)
+    }
+  }, [favoriteLoading, isFavorited, productoId, toast])
+
+  const handleShare = useCallback(async () => {
+    if (!productoId || shareLoading) {
+      return
+    }
+
+    try {
+      setShareLoading(true)
+      const url = shareUrl || (typeof window !== "undefined" ? window.location.href : "")
+      const nav =
+        typeof navigator !== "undefined"
+          ? (navigator as Navigator & {
+              share?: Navigator["share"]
+              clipboard?: Navigator["clipboard"]
+            })
+          : undefined
+      let shared = false
+      let shareMethod: "web-share" | "clipboard" | null = null
+
+      if (nav?.share && typeof nav.share === "function") {
+        await nav.share({ title: producto?.nombre, text: producto?.descripcion ?? undefined, url })
+        shared = true
+        shareMethod = "web-share"
+        toast({ title: "Gracias por compartir", description: "Más personas podrán descubrir esta prenda." })
+      } else if (nav?.clipboard && typeof nav.clipboard.writeText === "function" && url) {
+        await nav.clipboard.writeText(url)
+        shared = true
+        shareMethod = "clipboard"
+        toast({ title: "Enlace copiado", description: "Ya puedes pegarlo donde prefieras." })
+      }
+
+      if (shared) {
+        await registerEvent("share", { method: shareMethod ?? "unknown" })
+      } else {
+        toast({
+          title: "No pudimos compartir",
+          description: "Copia manualmente el enlace desde la barra del navegador.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return
+      }
+
+      toast({
+        title: "No pudimos compartir",
+        description: error instanceof Error ? error.message : "Intenta nuevamente más tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setShareLoading(false)
+    }
+  }, [producto?.descripcion, producto?.nombre, productoId, registerEvent, shareLoading, shareUrl, toast])
 
   const stockTotal = useMemo(() => {
     if (!producto?.inventario_items) return 0
@@ -141,15 +296,49 @@ export default function ProductoDetallePage() {
               </p>
             </div>
 
-            <div className="flex gap-4 mb-8">
-              <Link href="/probador-virtual" className={userRole === "admin" ? "flex-1" : "w-full"}>
+            <div className="flex flex-wrap gap-3 mb-8">
+              <Link
+                href="/probador-virtual"
+                className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
+              >
                 <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                   <Eye className="mr-2 h-5 w-5" />
                   Probar con AR
                 </Button>
               </Link>
+
+              <Button
+                type="button"
+                variant={isFavorited ? "secondary" : "outline"}
+                className="flex-1 min-w-[160px]"
+                disabled={favoriteLoading}
+                onClick={handleFavorite}
+              >
+                {favoriteLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Heart className="mr-2 h-5 w-5" fill={isFavorited ? "currentColor" : "none"} />
+                )}
+                {isFavorited ? "En favoritos" : "Guardar"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 min-w-[160px]"
+                disabled={shareLoading}
+                onClick={handleShare}
+              >
+                {shareLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Share2 className="mr-2 h-5 w-5" />
+                )}
+                Compartir
+              </Button>
+
               {userRole === "admin" && (
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="flex-1 min-w-[160px]">
                   <Link href={`/inventario?edit=${producto.id}`}>
                     <Edit className="mr-2 h-5 w-5" />Editar
                   </Link>

@@ -501,7 +501,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <DashboardVisuals
           panelClass={panelClass}
-          inventoryFlowData={inventoryFlowData}
           demandTrendData={demandTrendData}
           productTrafficData={productTrafficData}
           totalProducts={overview.metrics.totalProducts}
