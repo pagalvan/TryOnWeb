@@ -373,7 +373,6 @@ export const createPdfBuffer = async ({ dashboard, reports, filters }: ExportPay
   const periodLabel = filters.from && filters.to
     ? `${formatPlainDate(filters.from)} al ${formatPlainDate(filters.to)}`
     : "Periodo no especificado"
-  const inboundTotal = dashboard.inventoryFlow.reduce((acc, point) => acc + point.inbound, 0)
   const outboundTotal = dashboard.inventoryFlow.reduce((acc, point) => acc + point.outbound, 0)
 
   const metricCards: MetricCard[] = [
@@ -386,11 +385,6 @@ export const createPdfBuffer = async ({ dashboard, reports, filters }: ExportPay
       label: "Unidades disponibles",
       value: formatNumber(dashboard.metrics.totalStockUnits),
       detail: "Stock consolidado en bodegas",
-    },
-    {
-      label: "Ingresos registrados",
-      value: formatCurrency(inboundTotal),
-      detail: "Entradas del periodo",
     },
     {
       label: "Salidas registradas",
@@ -500,7 +494,6 @@ export const createExcelBuffer = async ({ dashboard, reports: _reports, filters 
   const workbook = XLSX.utils.book_new()
   const periodLabel = filters.from && filters.to ? `${filters.from} al ${filters.to}` : "Periodo no especificado"
   const generatedAt = formatDateTime(new Date())
-  const inboundTotal = dashboard.inventoryFlow.reduce((acc, point) => acc + point.inbound, 0)
   const outboundTotal = dashboard.inventoryFlow.reduce((acc, point) => acc + point.outbound, 0)
   const filterInfo = getFilterDisplayInfo(dashboard, filters)
 
@@ -513,7 +506,6 @@ export const createExcelBuffer = async ({ dashboard, reports: _reports, filters 
     ["Indicador", "Valor", "Descripción"],
     ["Valor inventario", dashboard.metrics.totalInventoryValue, formatCurrency(dashboard.metrics.totalInventoryValue)],
     ["Unidades disponibles", dashboard.metrics.totalStockUnits, "Unidades activas en stock"],
-    ["Ingresos registrados", inboundTotal, formatCurrency(inboundTotal)],
     ["Salidas registradas", outboundTotal, formatCurrency(outboundTotal)],
     ["Sesiones try-on", dashboard.tryOn.summary.sessions, `${formatNumber(dashboard.tryOn.summary.items)} items probados`],
     ["Alertas activas", dashboard.inventory.lowStock.length, "Productos por debajo del mínimo"],

@@ -46,9 +46,9 @@ export function DashboardVisuals({
       const date = new Date(point.date)
       return {
         day: dayShortFormatter.format(date),
-        revenue: point.views,
-        orders: point.tryons,
-        refunds: Math.max(0, Math.round(point.tryons * 0.35)),
+        views: point.views,
+        tryons: point.tryons,
+        returns: Math.max(0, Math.round(point.tryons * 0.35)),
       }
     })
   }, [demandTrendData])
@@ -223,9 +223,9 @@ export function DashboardVisuals({
             <ChartContainer
               className="h-[260px]"
               config={{
-                revenue: { label: "Nuevos ingresos", color: "#22c55e" },
-                orders: { label: "Órdenes", color: "#2563eb" },
-                refunds: { label: "Devoluciones", color: "#f97316" },
+                views: { label: "Vistas", color: "#22c55e" },
+                tryons: { label: "Try-ons", color: "#2563eb" },
+                returns: { label: "Devoluciones", color: "#f97316" },
               }}
             >
               <LineChart data={audienceLineData}>
@@ -233,12 +233,12 @@ export function DashboardVisuals({
                 <XAxis dataKey="day" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} width={32} />
                 <RechartsTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="orders" stroke="var(--color-orders)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="views" stroke="var(--color-views)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="tryons" stroke="var(--color-tryons)" strokeWidth={2} dot={false} />
                 <Line
                   type="monotone"
-                  dataKey="refunds"
-                  stroke="var(--color-refunds)"
+                  dataKey="returns"
+                  stroke="var(--color-returns)"
                   strokeWidth={2}
                   dot={false}
                   strokeDasharray="4 4"

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Banknote, Boxes, Eye, Layers, List } from "lucide-react"
+import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Banknote, Boxes, Eye, List } from "lucide-react"
 
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters"
 import { DashboardExportButton } from "@/components/dashboard/dashboard-export-button"
@@ -199,16 +199,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       accent: "from-sky-500 to-sky-600",
     },
     {
-      id: "flow-balance",
-      label: "Ingresos del periodo",
-      value: formatNumber(inboundTotal),
-      helper: `Salidas ${formatNumber(outboundTotal)}`,
-      delta: `${inboundTotal >= outboundTotal ? "+" : "-"}${Math.abs(inboundTotal - outboundTotal)}`,
-      deltaValue: inboundTotal - outboundTotal,
-      icon: Layers,
-      accent: "from-emerald-500 to-emerald-600",
-    },
-    {
       id: "tryon",
       label: "Probador virtual",
       value: formatNumber(totalTryOns),
@@ -247,23 +237,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const sparklineMap: Record<string, number[] | undefined> = {
     "inventory-value": toSparkline(inventoryFlowData.map((point) => point.inbound)),
     "available-units": toSparkline(inventoryFlowData.map((point) => point.inbound + point.outbound)),
-    "flow-balance": toSparkline(
-      inventoryFlowData.map((point) => point.inbound - point.outbound + Math.max(point.inbound, point.outbound))
-    ),
     tryon: toSparkline(tryOnTrendData.map((point) => point.sessions)),
   }
 
   const cardSourceMap: Record<string, string> = {
     "inventory-value": "Inventario",
     "available-units": "Almacén",
-    "flow-balance": "Movimientos",
     tryon: "TryOnWeb",
   }
 
   const cardProgressMap: Record<string, number> = {
     "inventory-value": Math.min(100, Math.max(0, Math.round(turnoverRate))),
     "available-units": Math.round(stockHealth),
-    "flow-balance": Math.min(100, Math.max(0, Math.round((inboundTotal / Math.max(outboundTotal, 1)) * 10))),
     tryon: Math.min(100, Math.max(0, Math.round(conversionRate))),
   }
 

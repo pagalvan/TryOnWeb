@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Imagen no disponible</title>
+  <desc id="desc">Rectángulo gris con ícono de fotografía</desc>
+  <defs>
+    <linearGradient id="placeholderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f3f4f6" />
+      <stop offset="100%" stop-color="#d1d5db" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="400" height="400" fill="url(#placeholderGradient)" rx="24" />
+  <path d="M120 140h160c11 0 20 9 20 20v120c0 11-9 20-20 20H120c-11 0-20-9-20-20V160c0-11 9-20 20-20zm56 116 24-32 18 24 28-36 32 44H136l40-56 32 44z" fill="#9ca3af" fill-rule="evenodd" />
+  <circle cx="248" cy="176" r="20" fill="#9ca3af" />
+</svg>
