@@ -39,13 +39,12 @@ type ReportExport = {
   summary?: string
 }
 
-type CategoryOverview = {
+type LocationOverview = {
   inventoryValue: string
-  activeProducts: string
-  conversionRate: string
-  stockUnits: string
-  distribution: Array<{ label: string; count: string; percent: number }>
-  traffic: Array<{ label: string; count: string; percent: number }>
+  totalUnits: string
+  activeLocations: number
+  distribution: Array<{ label: string; units: string; percent: number; products: string }>
+  alerts: Array<{ label: string; low: number; critical: number; budget: number }>
 }
 
 type StockHighlight = {
@@ -78,7 +77,7 @@ export type DashboardExportData = {
   movements: MovementExport[]
   reports: ReportExport[]
   stockHighlight?: StockHighlight
-  categoryOverview: CategoryOverview
+  locationOverview: LocationOverview
   conversionRateLabel: string
   notes?: ReactNode
 }
@@ -108,7 +107,7 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
     movements,
     reports,
     stockHighlight,
-    categoryOverview,
+    locationOverview,
     conversionRateLabel,
     notes,
   } = data
@@ -226,7 +225,7 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <CategoryPanoramaCard overview={categoryOverview} />
+        <LocationPanoramaCard overview={locationOverview} />
         <ReportsCard reports={reports} />
       </section>
 
@@ -619,61 +618,65 @@ function MovementsCard({ movements }: MovementsCardProps) {
   )
 }
 
-type CategoryPanoramaCardProps = {
-  overview: CategoryOverview
+type LocationPanoramaCardProps = {
+  overview: LocationOverview
 }
 
-function CategoryPanoramaCard({ overview }: CategoryPanoramaCardProps) {
+function LocationPanoramaCard({ overview }: LocationPanoramaCardProps) {
   return (
     <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#ecfeff] to-[#cffafe] p-6 shadow-xl">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-lg font-semibold text-slate-900">Panorama de categorías</p>
-          <p className="text-sm text-slate-600">Distribución reportada y actividad de catálogo.</p>
+          <p className="text-lg font-semibold text-slate-900">Panorama por bodega</p>
+          <p className="text-sm text-slate-600">Distribución de inventario y alertas por ubicación.</p>
         </div>
-        <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">Analytics</span>
+        <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">Logística</span>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor inventario</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{overview.inventoryValue}</p>
-          <p className="text-xs text-slate-500">{overview.activeProducts} productos activos</p>
+          <p className="text-xs text-slate-500">{overview.activeLocations} bodegas activas</p>
         </div>
         <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conversión</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{overview.conversionRate}</p>
-          <p className="text-xs text-slate-500">{overview.stockUnits} unidades totales</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock total</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{overview.totalUnits} uds</p>
+          <p className="text-xs text-slate-500">Inventario consolidado</p>
         </div>
       </div>
       <div className="mt-5 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Distribución por categoría</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock por bodega</p>
         {overview.distribution.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-sm text-slate-500">
-            Aún no existen categorías registradas en reportes.
+            No hay ubicaciones con inventario disponible.
           </div>
         ) : (
-          overview.distribution.map((category) => (
-            <div key={category.label} className="space-y-1 text-sm">
+          overview.distribution.map((location) => (
+            <div key={location.label} className="space-y-1 text-sm">
               <div className="flex items-center justify-between text-slate-600">
-                <span className="font-medium text-slate-900">{category.label}</span>
-                <span>{category.count} uds · {Math.min(category.percent, 100)}%</span>
+                <span className="font-medium text-slate-900">{location.label}</span>
+                <span>{location.units} · {Math.min(location.percent, 100)}%</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="rounded-full bg-white/70 px-2 py-0.5">{location.products} productos</span>
               </div>
               <div className="h-2 rounded-full bg-slate-100">
-                <div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(category.percent, 100)}%` }} />
+                <div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(location.percent, 100)}%` }} />
               </div>
             </div>
           ))
         )}
       </div>
       <div className="mt-5 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tráfico registrado</p>
-        {overview.traffic.length === 0 ? (
-          <p className="text-sm text-slate-500">No hay eventos capturados en los reportes recientes.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Alertas activas</p>
+        {overview.alerts.length === 0 ? (
+          <p className="text-sm text-slate-500">Sin alertas activas por bodega.</p>
         ) : (
-          overview.traffic.map((item) => (
-            <div key={item.label} className="flex items-center justify-between text-sm text-slate-600">
-              <span>{item.label}</span>
-              <span className="font-semibold text-slate-900">{item.count} · {Math.min(item.percent, 100)}%</span>
+          overview.alerts.map((alert) => (
+            <div key={alert.label} className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/70 p-3 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{alert.label}</span>
+              <span className="text-xs text-amber-600">{alert.low} en seguimiento</span>
+              <span className="text-xs font-semibold text-rose-600">{alert.critical} críticas</span>
             </div>
           ))
         )}

@@ -161,6 +161,19 @@ export default function InventarioPage() {
 	}, [])
 
 	const categoriasFiltro = useMemo(() => ["Todos", ...categorias.map((c) => c.nombre)], [categorias])
+	const MAX_VISIBLE_CATEGORIES = 6
+	const categoriasVisibles = useMemo(
+		() => categoriasFiltro.slice(0, MAX_VISIBLE_CATEGORIES),
+		[categoriasFiltro]
+	)
+	const categoriasOcultas = useMemo(
+		() => categoriasFiltro.slice(MAX_VISIBLE_CATEGORIES),
+		[categoriasFiltro]
+	)
+	const categoriaOcultaSeleccionada = useMemo(
+		() => categoriasOcultas.includes(categoriaActiva),
+		[categoriaActiva, categoriasOcultas]
+	)
 
 	const effectiveLocationId = locationFilterId === ALL_LOCATIONS_VALUE ? undefined : locationFilterId
 
@@ -392,7 +405,7 @@ export default function InventarioPage() {
 					</div>
 
 					<div className="flex flex-wrap items-center gap-3">
-						<MetricCard label="Total Productos" value={productos.length.toString()} />
+						<MetricCard label="Total Productos" value={productosFiltrados.length.toString()} />
 						<MetricCard label="Unidades en Stock" value={totalStock.toString()} />
 						<MetricCard label="Valor Total" value={`$${totalValor.toLocaleString()}`} />
 					</div>
@@ -457,7 +470,7 @@ export default function InventarioPage() {
 					</div>
 
 					<div className="flex flex-wrap gap-2 mt-4">
-						{categoriasFiltro.map((cat) => (
+						{categoriasVisibles.map((cat) => (
 							<button
 								key={cat}
 								onClick={() => setCategoriaActiva(cat)}
@@ -470,6 +483,31 @@ export default function InventarioPage() {
 								{cat}
 							</button>
 						))}
+						{categoriasOcultas.length > 0 ? (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="outline"
+										className={`px-4 py-1.5 h-auto rounded-lg text-sm font-medium transition-all bg-muted text-foreground gap-2 ${
+											categoriaOcultaSeleccionada ? "border-primary/60 text-primary" : "hover:text-foreground hover:bg-muted/80"
+										}`}
+									>
+										Más categorías
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="start" className="min-w-[12rem]">
+									{categoriasOcultas.map((cat) => (
+										<DropdownMenuItem
+											key={cat}
+											onSelect={() => setCategoriaActiva(cat)}
+											className={categoriaActiva === cat ? "bg-primary/10 text-primary" : ""}
+										>
+											{cat}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						) : null}
 					</div>
 				</div>
 

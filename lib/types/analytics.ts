@@ -88,6 +88,15 @@ export type DashboardMetrics = {
   tryOnItems: number
 }
 
+export type LocationSummary = {
+  location: string
+  totalUnits: number
+  inventoryValue: number
+  productCount: number
+  lowStockCount: number
+  criticalCount: number
+}
+
 export type DashboardOverview = {
   context: {
     generatedAt: string
@@ -96,6 +105,7 @@ export type DashboardOverview = {
   }
   metrics: DashboardMetrics
   categories: Array<{ id: string; nombre: string; productCount: number }>
+  locations: LocationSummary[]
   inventory: {
     lowStock: LowStockProduct[]
     movements: InventoryMovement[]

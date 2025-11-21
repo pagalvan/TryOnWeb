@@ -15,6 +15,7 @@ import {
   type InventoryFlowPoint,
   type TryOnTrendPoint,
   type DashboardAvailableFilters,
+  type LocationSummary,
 } from "@/lib/types/analytics"
 
 const INVENTORY_SELECT = `
@@ -663,6 +664,68 @@ export const getDashboardOverview = async (filters?: DashboardFiltersInput): Pro
       ? lowStockAll
       : lowStockAll.filter((item) => item.status === normalizedFilters.stockStatus)
 
+  const locationStats = new Map<
+    string,
+    {
+      totalUnits: number
+      inventoryValue: number
+      productIds: Set<string>
+      lowStockCount: number
+      criticalCount: number
+    }
+  >()
+
+  for (const item of filteredInventory) {
+    const locationKey = item.ubicacion?.trim() ? item.ubicacion.trim() : "Sin ubicación"
+    const quantity = item.cantidad ?? 0
+    const minimum = item.cantidad_minima ?? 0
+    const status = item.estado?.toLowerCase?.() ?? "ok"
+    const product = firstItem(item.prendas)
+    const productId = product?.id ?? item.prenda_id ?? null
+    const priceSource = product ?? (productId ? productMap.get(productId) : null)
+    const price = parseCurrency(priceSource?.valor_unitario)
+
+    let entry = locationStats.get(locationKey)
+    if (!entry) {
+      entry = {
+        totalUnits: 0,
+        inventoryValue: 0,
+        productIds: new Set<string>(),
+        lowStockCount: 0,
+        criticalCount: 0,
+      }
+      locationStats.set(locationKey, entry)
+    }
+
+    entry.totalUnits += quantity
+    entry.inventoryValue += quantity * price
+    if (productId) {
+      entry.productIds.add(productId)
+    }
+
+    const isCritical = status === "sin_stock" || quantity <= 0
+    const isLowStock = isCritical || status === "bajo" || quantity <= minimum
+
+    if (isLowStock) {
+      entry.lowStockCount += 1
+    }
+
+    if (isCritical) {
+      entry.criticalCount += 1
+    }
+  }
+
+  const locations: LocationSummary[] = Array.from(locationStats.entries())
+    .map(([location, stats]) => ({
+      location,
+      totalUnits: stats.totalUnits,
+      inventoryValue: stats.inventoryValue,
+      productCount: stats.productIds.size,
+      lowStockCount: stats.lowStockCount,
+      criticalCount: stats.criticalCount,
+    }))
+    .sort((a, b) => b.totalUnits - a.totalUnits)
+
   const categoryProductMap = new Map<string, Set<string>>()
   for (const item of filteredInventory) {
     const product = firstItem(item.prendas)
@@ -742,6 +805,7 @@ export const getDashboardOverview = async (filters?: DashboardFiltersInput): Pro
       tryOnItems: filteredTryOnItems.length,
     },
     categories,
+    locations,
     inventory: {
       lowStock: lowStockFiltered,
       movements: mapMovements(sortedMovements).slice(0, 8),
