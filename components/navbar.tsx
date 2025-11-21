@@ -34,7 +34,6 @@ export function Navbar() {
   const publicLinks = [
     { href: "/", label: "Inicio" },
     { href: "/productos", label: "Catálogo" },
-    { href: "/probador-virtual", label: "Probador Virtual" },
   ]
 
   const adminLinks = [
@@ -42,7 +41,6 @@ export function Navbar() {
     { href: "/inventario", label: "Inventario" },
     { href: "/productos", label: "Productos" },
     { href: "/categorias", label: "Categorías" },
-    { href: "/probador-virtual", label: "Probador Virtual" },
     { href: "/configuracion", label: "Configuración" },
   ]
 

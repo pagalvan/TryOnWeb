@@ -38,6 +38,7 @@
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "@radix-ui/react-visually-hidden": "latest",
+    "@snap/camera-kit": "^1.12.1",
     "@supabase/supabase-js": "^2.81.1",
     "@vercel/analytics": "1.3.1",
     "autoprefixer": "^10.4.20",

@@ -4,17 +4,20 @@ import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { productPayloadSchema } from "@/lib/schemas/product"
 import { resolveInventoryLocation } from "./location-helpers"
+import { syncLensAsset } from "./lens-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
   categorias:categoria_id ( id, nombre ),
-  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado, bodega_id )
+  inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado, bodega_id ),
+  lens_assets ( id, prenda_id, tipo, url, provider, version, metadata, activo, created_at, updated_at )
 `
 
 const mapProduct = (producto: any) => ({
   ...producto,
   categorias: Array.isArray(producto.categorias) ? producto.categorias[0] ?? null : producto.categorias ?? null,
   inventario_items: producto.inventario_items ?? [],
+  lens_assets: Array.isArray(producto.lens_assets) ? producto.lens_assets : [],
 })
 
 export const runtime = "nodejs"
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
     stockInicial,
     stockLocationId,
     ubicacion,
+    lensAsset,
   } = result.data
 
   const supabase = getSupabaseAdminClient()
@@ -111,6 +115,12 @@ export async function POST(request: NextRequest) {
     if (stockError) {
       return NextResponse.json({ message: stockError.message }, { status: 400 })
     }
+  }
+
+  const { error: lensAssetError } = await syncLensAsset(supabase, data.id, lensAsset ?? null)
+  if (lensAssetError) {
+    await supabase.from("prendas").delete().eq("id", data.id)
+    return NextResponse.json({ message: lensAssetError.message ?? "No pudimos asociar el Lens" }, { status: 400 })
   }
 
   const { data: refreshed } = await supabase

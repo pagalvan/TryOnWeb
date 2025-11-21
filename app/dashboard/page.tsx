@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Banknote, Boxes, Eye, List } from "lucide-react"
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Banknote, Boxes, Eye, List } from "lucide-react"
 
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters"
 import { DashboardExportButton } from "@/components/dashboard/dashboard-export-button"
@@ -10,7 +9,6 @@ import { DashboardVisuals } from "@/components/dashboard/dashboard-visuals"
 import { TryOnTrendChart } from "@/components/dashboard/tryon-trend-chart"
 import { Navbar } from "@/components/navbar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { fetchDashboardOverview } from "@/lib/services/dashboard"
 import { fetchReportsOverview } from "@/lib/services/reports"
@@ -55,78 +53,111 @@ const formatDateTime = (value: string) =>
     timeZone: COMMON_TIMEZONE,
   }).format(new Date(value))
 
-const formatDateRange = (from: string, to: string) => {
-  const formatter = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: COMMON_TIMEZONE })
-  return `${formatter.format(new Date(from))} · ${formatter.format(new Date(to))}`
+const formatShortDate = (value: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "short",
+  }).format(date)
 }
 
-const formatShortDate = (value: string) =>
-  new Intl.DateTimeFormat("es-CO", {
-    day: "2-digit",
-    month: "short",
-    timeZone: COMMON_TIMEZONE,
-  }).format(new Date(value))
+const formatDateRange = (from: string, to: string) => {
+  const start = new Date(from)
+  const end = new Date(to)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "—"
 
-const panelClass = "rounded-[20px] border border-white/70 bg-white shadow-[0_25px_60px_rgba(15,23,42,0.08)]"
+  const formatter = new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+  return `${formatter.format(start)} - ${formatter.format(end)}`
+}
 
 const FALLBACK_INVENTORY_FLOW: InventoryFlowPoint[] = [
-  { date: "2025-09-01", inbound: 1200, outbound: 900 },
-  { date: "2025-09-02", inbound: 950, outbound: 700 },
-  { date: "2025-09-03", inbound: 1400, outbound: 1100 },
-  { date: "2025-09-04", inbound: 1250, outbound: 1000 },
-  { date: "2025-09-05", inbound: 1500, outbound: 1200 },
-  { date: "2025-09-06", inbound: 1350, outbound: 950 },
+  { date: "2024-01-05", inbound: 120, outbound: 80 },
+  { date: "2024-01-12", inbound: 150, outbound: 90 },
+  { date: "2024-01-19", inbound: 140, outbound: 110 },
+  { date: "2024-01-26", inbound: 160, outbound: 120 },
+  { date: "2024-02-02", inbound: 170, outbound: 115 },
+  { date: "2024-02-09", inbound: 180, outbound: 130 },
+  { date: "2024-02-16", inbound: 190, outbound: 140 },
+  { date: "2024-02-23", inbound: 210, outbound: 150 },
 ]
 
 const FALLBACK_TRYON_TREND: TryOnTrendPoint[] = [
-  { date: "2025-09-01", sessions: 320, items: 210 },
-  { date: "2025-09-02", sessions: 280, items: 190 },
-  { date: "2025-09-03", sessions: 360, items: 250 },
-  { date: "2025-09-04", sessions: 340, items: 230 },
-  { date: "2025-09-05", sessions: 400, items: 270 },
-  { date: "2025-09-06", sessions: 370, items: 260 },
+  { date: "2024-01-05", sessions: 45, items: 110 },
+  { date: "2024-01-12", sessions: 52, items: 118 },
+  { date: "2024-01-19", sessions: 60, items: 130 },
+  { date: "2024-01-26", sessions: 66, items: 145 },
+  { date: "2024-02-02", sessions: 70, items: 152 },
+  { date: "2024-02-09", sessions: 74, items: 160 },
+  { date: "2024-02-16", sessions: 79, items: 172 },
+  { date: "2024-02-23", sessions: 83, items: 185 },
 ]
 
 const FALLBACK_DEMAND_TREND: DemandTrendPoint[] = [
-  { date: "2025-09-01", views: 1800, tryons: 900 },
-  { date: "2025-09-02", views: 1500, tryons: 850 },
-  { date: "2025-09-03", views: 2000, tryons: 1100 },
-  { date: "2025-09-04", views: 2100, tryons: 1200 },
-  { date: "2025-09-05", views: 2300, tryons: 1300 },
-  { date: "2025-09-06", views: 1900, tryons: 1000 },
+  { date: "2024-01-05", views: 820, tryons: 210 },
+  { date: "2024-01-12", views: 860, tryons: 225 },
+  { date: "2024-01-19", views: 910, tryons: 240 },
+  { date: "2024-01-26", views: 950, tryons: 255 },
+  { date: "2024-02-02", views: 980, tryons: 265 },
+  { date: "2024-02-09", views: 1010, tryons: 278 },
+  { date: "2024-02-16", views: 1050, tryons: 292 },
+  { date: "2024-02-23", views: 1085, tryons: 304 },
 ]
 
 const FALLBACK_PRODUCT_TRAFFIC: ProductTrafficItem[] = [
-  { type: "view", label: "Vistas", count: 1800 },
-  { type: "tryon", label: "Try-ons", count: 750 },
-  { type: "favorite", label: "Favoritos", count: 360 },
-  { type: "share", label: "Compartidos", count: 140 },
+  { type: "view", label: "Vistas", count: 5200 },
+  { type: "tryon", label: "Try-ons", count: 1480 },
+  { type: "favorite", label: "Favoritos", count: 640 },
+  { type: "share", label: "Compartidos", count: 320 },
 ]
 
-type RawSearchParams = Record<string, string | string[] | undefined>
+type DashboardPageSearchParams = Record<string, string | string[] | undefined>
+
+const toSingleValue = (value?: string | string[]): string | undefined => {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+  return value ?? undefined
+}
+
+const parseFiltersFromSearchParams = (searchParams?: DashboardPageSearchParams): DashboardFiltersInput => {
+  if (!searchParams) return {}
+
+  const filters: DashboardFiltersInput = {}
+  const from = toSingleValue(searchParams.from)
+  const to = toSingleValue(searchParams.to)
+  const categoryId = toSingleValue(searchParams.categoryId)
+  const location = toSingleValue(searchParams.location)
+  const stockStatus = toSingleValue(searchParams.stockStatus)
+
+  if (from) filters.from = from
+  if (to) filters.to = to
+  if (categoryId) filters.categoryId = categoryId
+  if (location) filters.location = location
+  if (stockStatus === "all" || stockStatus === "warning" || stockStatus === "critical") {
+    filters.stockStatus = stockStatus
+  }
+
+  return filters
+}
 
 type DashboardPageProps = {
-  searchParams?: RawSearchParams | Promise<RawSearchParams>
+  searchParams?: DashboardPageSearchParams
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const resolvedSearchParams = await Promise.resolve(searchParams ?? {})
-  const stockParam = typeof resolvedSearchParams.stockStatus === "string" ? resolvedSearchParams.stockStatus : undefined
-
-  const filters: DashboardFiltersInput = {
-    from: typeof resolvedSearchParams.from === "string" ? resolvedSearchParams.from : undefined,
-    to: typeof resolvedSearchParams.to === "string" ? resolvedSearchParams.to : undefined,
-    categoryId: typeof resolvedSearchParams.categoryId === "string" ? resolvedSearchParams.categoryId : undefined,
-    location: typeof resolvedSearchParams.location === "string" ? resolvedSearchParams.location : undefined,
-    stockStatus:
-      stockParam === "warning" || stockParam === "critical" || stockParam === "all" ? stockParam : undefined,
-  }
+  const filters = parseFiltersFromSearchParams(searchParams)
 
   const [overview, reportsOverview] = await Promise.all([
     fetchDashboardOverview(filters),
     fetchReportsOverview(),
   ])
 
+  const panelClass = "rounded-3xl border border-slate-100/70 bg-white/80 shadow-[0_25px_60px_-12px_rgba(15,23,42,0.18)] backdrop-blur-sm"
   const hasInventoryFlow = overview.inventoryFlow.length > 0
   const hasTryOnTrend = overview.tryOn.trend.length > 0
   const hasDemandTrend = overview.demandTrend.length > 0
@@ -172,10 +203,28 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const tryOnSummary = overview.tryOn.summary
 
   const reportsPreview = reportsOverview.recentReports.slice(0, 4)
-  const reportCategoryDistribution = reportsOverview.categoryDistribution.slice(0, 5)
-  const reportDistributionTotal = reportCategoryDistribution.reduce((acc, item) => acc + item.productCount, 0) || 1
-  const reportsTraffic = reportsOverview.traffic
-  const reportsTrafficTotal = reportsTraffic.reduce((acc, item) => acc + item.count, 0) || 1
+
+  const locationSummaries = overview.locations ?? []
+  const activeLocations = locationSummaries.length
+  const totalLocationUnits = locationSummaries.reduce((acc, item) => acc + item.totalUnits, 0)
+  const totalLocationValue = locationSummaries.reduce((acc, item) => acc + item.inventoryValue, 0)
+  const locationDistribution = locationSummaries.map((summary) => ({
+    label: summary.location,
+    units: summary.totalUnits,
+    percent: totalLocationUnits > 0 ? Math.round((summary.totalUnits / totalLocationUnits) * 100) : 0,
+    formattedUnits: formatNumber(summary.totalUnits),
+    productCount: summary.productCount,
+    formattedProducts: formatNumber(summary.productCount),
+  }))
+  const locationAlerts = locationSummaries
+    .map((summary) => ({
+      label: summary.location,
+      low: summary.lowStockCount,
+      critical: summary.criticalCount,
+    }))
+    .filter((item) => item.low > 0 || item.critical > 0)
+
+  const maxAlertTotal = locationAlerts.reduce((acc, item) => Math.max(acc, item.low + item.critical), 0) || 1
 
   const overviewCards = [
     {
@@ -333,23 +382,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       }
     : undefined
 
-  const categoryOverviewExport = {
-    inventoryValue: formatCurrency(reportsOverview.metrics.inventoryValue),
-    activeProducts: formatNumber(reportsOverview.metrics.activeProducts),
-    conversionRate: formatPercentage(reportsOverview.metrics.conversionRate),
-    stockUnits: formatNumber(reportsOverview.metrics.stockUnits),
-    distribution: reportCategoryDistribution.map((category) => ({
-      label: category.nombre,
-      count: formatNumber(category.productCount),
-      percent: Math.max(
-        category.percentage,
-        Math.round((category.productCount / reportDistributionTotal) * 100),
-      ),
-    })),
-    traffic: reportsTraffic.map((item) => ({
+  const locationOverviewExport = {
+    inventoryValue: formatCurrency(totalLocationValue),
+    totalUnits: formatNumber(totalLocationUnits),
+    activeLocations,
+    distribution: locationDistribution.map((item) => ({
       label: item.label,
-      count: formatNumber(item.count),
-      percent: Math.round((item.count / reportsTrafficTotal) * 100),
+      units: item.formattedUnits,
+      percent: Math.min(item.percent, 100),
+      products: item.formattedProducts,
+    })),
+    alerts: locationSummaries.map((summary) => ({
+      label: summary.location,
+      low: summary.lowStockCount,
+      critical: summary.criticalCount,
+      budget: Math.round(((summary.lowStockCount + summary.criticalCount) / maxAlertTotal) * 100),
     })),
   }
 
@@ -408,7 +455,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     movements: movementsExport,
     reports: reportsExport,
     stockHighlight,
-    categoryOverview: categoryOverviewExport,
+    locationOverview: locationOverviewExport,
     conversionRateLabel,
     notes: (
       <p>
@@ -419,7 +466,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
 
   return (
-    <div className="min-h-screen bg-[#f5f7ff] overflow-x-hidden">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       <Navbar />
 
       <main
@@ -697,7 +744,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <section className="grid gap-6 xl:grid-cols-12">
           <Card
-            className={`${panelClass} xl:col-span-5`}
+            className={`${panelClass} xl:col-span-12`}
             style={{ background: "linear-gradient(135deg, #f3e8ff 0%, #e0cdfc 100%)" }}
           >
             <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -756,58 +803,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               )}
             </CardContent>
           </Card>
-
-          <Card
-            className={`${panelClass} xl:col-span-7`}
-            style={{ background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)" }}
-          >
-            <CardHeader className="flex flex-col gap-2 p-6 pb-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-lg font-semibold text-slate-900">Movimientos recientes</CardTitle>
-                  <CardDescription className="text-sm text-slate-500">
-                    Últimas operaciones confirmadas en inventario.
-                  </CardDescription>
-                </div>
-                <Button asChild size="sm" variant="outline" className="rounded-full border-slate-200 text-xs">
-                  <Link href="/inventario">Ver historial completo</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 px-6 pb-6 pt-0">
-              {movementsPreview.length === 0 ? (
-                <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm text-slate-500">
-                  No registramos movimientos en el periodo filtrado.
-                </div>
-              ) : (
-                movementsPreview.map((movement) => {
-                  const isInbound = movement.type.toLowerCase().includes("in")
-                  return (
-                    <div key={movement.id} className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-100 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${isInbound ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
-                          <Activity className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{movement.motive ?? movement.type}</p>
-                          <p className="text-xs text-slate-500">
-                            {movement.location ?? "Sin ubicación"} · {formatDateTime(movement.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-semibold ${isInbound ? "text-emerald-600" : "text-rose-600"}`}>
-                          {isInbound ? "+" : "-"}
-                          {formatNumber(movement.quantity)} uds
-                        </p>
-                        <p className="text-xs text-slate-500">Ref: {movement.reference ?? "N/A"}</p>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </CardContent>
-          </Card>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-12">
@@ -818,13 +813,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <CardHeader className="p-6 pb-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-semibold text-slate-900">Panorama de categorías</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Panorama por bodega</CardTitle>
                   <CardDescription className="text-sm text-slate-500">
-                    Distribución reportada y actividad de catálogo.
+                    Inventario consolidado y alertas por ubicación.
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="rounded-full border-slate-200 text-xs text-slate-600">
-                  Analytics
+                  Logística
                 </Badge>
               </div>
             </CardHeader>
@@ -832,57 +827,55 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-slate-100 bg-white/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor inventario</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(reportsOverview.metrics.inventoryValue)}</p>
-                  <p className="text-xs text-slate-500">{formatNumber(reportsOverview.metrics.activeProducts)} productos activos</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalLocationValue)}</p>
+                  <p className="text-xs text-slate-500">{activeLocations} bodegas activas</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-white/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conversión</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formatPercentage(reportsOverview.metrics.conversionRate)}</p>
-                  <p className="text-xs text-slate-500">{formatNumber(reportsOverview.metrics.stockUnits)} unidades totales</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock total</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(totalLocationUnits)} uds</p>
+                  <p className="text-xs text-slate-500">{formatNumber(overview.metrics.totalProducts)} productos únicos</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Distribución por categoría</p>
-                {reportCategoryDistribution.length === 0 ? (
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock por bodega</p>
+                {locationDistribution.length === 0 ? (
                   <div className="flex min-h-[140px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/70 text-sm text-slate-500">
-                    Aún no existen categorías registradas en reportes.
+                    No hay ubicaciones con inventario registrado en este periodo.
                   </div>
                 ) : (
-                  reportCategoryDistribution.map((category) => {
-                    const share = Math.max(
-                      category.percentage,
-                      Math.round((category.productCount / reportDistributionTotal) * 100),
-                    )
-                    return (
-                      <div key={category.id} className="space-y-2">
-                        <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-                          <span className="font-medium text-slate-900">{category.nombre}</span>
-                          <span>{formatNumber(category.productCount)} uds · {share}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-slate-100">
-                          <div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(share, 100)}%` }} />
-                        </div>
+                  locationDistribution.map((location) => (
+                    <div key={location.label} className="space-y-2">
+                      <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="font-medium text-slate-900">{location.label}</span>
+                        <span>{location.formattedUnits} uds · {Math.min(location.percent, 100)}%</span>
                       </div>
-                    )
-                  })
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <span className="rounded-full bg-white/70 px-2.5 py-1">{location.formattedProducts} productos</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100">
+                        <div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(location.percent, 100)}%` }} />
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
 
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tráfico registrado</p>
-                {reportsTraffic.length === 0 ? (
-                  <p className="text-sm text-slate-500">No hay eventos capturados en los reportes recientes.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Alertas activas</p>
+                {locationAlerts.length === 0 ? (
+                  <p className="text-sm text-slate-500">No hay alertas activas por bodega.</p>
                 ) : (
-                  reportsTraffic.map((item) => {
-                    const share = Math.round((item.count / reportsTrafficTotal) * 100)
-                    return (
-                      <div key={item.type} className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-                        <span className="capitalize text-slate-900">{item.label}</span>
-                        <span className="font-semibold text-slate-900">{formatNumber(item.count)} · {share}%</span>
-                      </div>
-                    )
-                  })
+                  locationAlerts.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex flex-col gap-1 rounded-2xl border border-white/70 bg-white/70 p-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <span className="font-medium text-slate-900">{item.label}</span>
+                      <span className="text-xs text-amber-600">{item.low} en seguimiento</span>
+                      <span className="text-xs font-semibold text-rose-600">{item.critical} críticas</span>
+                    </div>
+                  ))
                 )}
               </div>
             </CardContent>

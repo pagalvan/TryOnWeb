@@ -31,8 +31,8 @@ export default function HomePage() {
             <p className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl mx-auto text-pretty">
               Experimenta productos en tiempo real con nuestro probador virtual
             </p>
-            <Button size="lg" className="bg-[#11120D] text-[#FFFBF4] hover:bg-[#11120D]/90 rounded-full px-8">
-              Explorar
+            <Button asChild size="lg" className="bg-[#11120D] text-[#FFFBF4] hover:bg-[#11120D]/90 rounded-full px-8">
+              <Link href="/productos">Explorar</Link>
             </Button>
           </div>
         </div>
@@ -57,18 +57,18 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <Link href="/probador-virtual" className="group">
+          <Link href="/productos" className="group">
             <div className="bg-card border border-border rounded-2xl p-8 hover:shadow-lg transition-all">
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
                 <Eye className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-display text-2xl font-semibold mb-3 text-foreground">Probador Virtual AR</h3>
+              <h3 className="font-display text-2xl font-semibold mb-3 text-foreground">AR dentro del catálogo</h3>
               <p className="text-muted-foreground mb-4 text-pretty">
-                Experiencia inmersiva de prueba virtual con tecnología Lens Studio para visualizar productos en tiempo
-                real.
+                Abre la cámara directamente en la página del producto y visualiza tus prendas favoritas sin salir del
+                catálogo.
               </p>
               <span className="text-primary font-medium inline-flex items-center gap-2 group-hover:gap-3 transition-all">
-                Probar ahora
+                Ir al catálogo
                 <ArrowRight className="h-4 w-4" />
               </span>
             </div>
@@ -101,9 +101,9 @@ export default function HomePage() {
           <p className="text-lg text-primary-foreground/80 mb-8 max-w-2xl mx-auto text-pretty">
             Descubre productos con tecnología de realidad aumentada y vive una experiencia de compra única.
           </p>
-          <Link href="/probador-virtual">
+          <Link href="/productos">
             <Button size="lg" className="bg-background text-foreground hover:bg-background/90 rounded-full px-8">
-              Probar ahora
+              Ver catálogo
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
@@ -120,9 +120,6 @@ export default function HomePage() {
               <nav className="hidden md:flex gap-6 text-sm text-muted-foreground">
                 <Link href="/productos" className="hover:text-foreground transition-colors">
                   Catálogo
-                </Link>
-                <Link href="/probador-virtual" className="hover:text-foreground transition-colors">
-                  Probador Virtual
                 </Link>
                 <Link href="/login" className="hover:text-foreground transition-colors">
                   Acceder

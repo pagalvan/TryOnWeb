@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Sparkles, Menu, Home, Package, Eye, BarChart3, Box, ShoppingBag, Settings } from "lucide-react"
+import { Sparkles, Menu, Home, Package, BarChart3, Box, ShoppingBag, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
@@ -9,7 +9,6 @@ export function DashboardNav() {
     { href: "/inventario", label: "Inventario", icon: Package },
     { href: "/productos", label: "Productos", icon: ShoppingBag },
     { href: "/categorias", label: "Categorías", icon: Box },
-    { href: "/probador-virtual", label: "Probador Virtual", icon: Eye },
     { href: "/reportes", label: "Reportes", icon: BarChart3 },
     { href: "/configuracion", label: "Configuración", icon: Settings },
   ]

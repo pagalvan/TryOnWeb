@@ -83,15 +83,6 @@ const STATUS_OPTIONS = [
   { value: "inactiva", label: "Inactiva" },
 ]
 
-const COLOR_CLASSES = [
-  "bg-blue-500",
-  "bg-purple-500",
-  "bg-green-500",
-  "bg-orange-500",
-  "bg-red-500",
-  "bg-teal-500",
-]
-
 const emptyFormState = (): CategoryFormState => ({
   id: null,
   nombre: "",
@@ -241,8 +232,7 @@ export default function CategoriasPage() {
           </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categorias.map((categoria, index) => {
-              const colorClass = COLOR_CLASSES[index % COLOR_CLASSES.length]
+            {categorias.map((categoria) => {
               const isActive = categoria.estado === "activa"
               const IconComponent = categoria.icon
                 ? CATEGORY_ICON_MAP[categoria.icon as IconValue]
@@ -252,7 +242,14 @@ export default function CategoriasPage() {
                 <Card key={categoria.id} className="hover:shadow-lg transition-all group">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
-                      <div className={`h-12 w-12 rounded-xl ${colorClass} flex items-center justify-center text-white text-xl`}>
+                      <div
+                        className={`h-12 w-12 rounded-xl flex items-center justify-center text-white text-xl backdrop-blur-sm shadow-inner`}
+                        style={{
+                          background: "linear-gradient(135deg, rgba(32, 163, 169, 0.65), rgba(13, 110, 123, 0.35))",
+                          border: "1px solid rgba(255, 255, 255, 0.25)",
+                          boxShadow: "0 10px 25px rgba(13, 110, 123, 0.15)",
+                        }}
+                      >
                         {IconComponent ? <IconComponent className="h-6 w-6" /> : <Package className="h-6 w-6" />}
                       </div>
                       <DropdownMenu>
