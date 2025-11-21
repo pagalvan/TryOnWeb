@@ -146,11 +146,12 @@ const parseFiltersFromSearchParams = (searchParams?: DashboardPageSearchParams):
 }
 
 type DashboardPageProps = {
-  searchParams?: DashboardPageSearchParams
+  searchParams?: DashboardPageSearchParams | Promise<DashboardPageSearchParams>
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const filters = parseFiltersFromSearchParams(searchParams)
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {})
+  const filters = parseFiltersFromSearchParams(resolvedSearchParams)
 
   const [overview, reportsOverview] = await Promise.all([
     fetchDashboardOverview(filters),
