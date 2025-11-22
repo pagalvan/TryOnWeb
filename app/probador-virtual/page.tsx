@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Camera,
   Sparkles,
@@ -61,6 +61,8 @@ type LensProduct = {
   lens_assets?: LensAsset[] | null
 }
 
+type TryOnItemStatus = "exito" | "parcial" | "descartado" | "pendiente"
+
 export default function ProbadorVirtualPage() {
   const [products, setProducts] = useState<LensProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,9 +73,31 @@ export default function ProbadorVirtualPage() {
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
   const [pendingStartProductId, setPendingStartProductId] = useState<string | null>(null)
   const [lastError, setLastError] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const [sessionMutating, setSessionMutating] = useState(false)
 
   const cameraToken = getCameraKitToken()
   const lensGroupId = CAMERA_KIT_DEFAULT_LENS_GROUP_ID
+
+  const activeProductIdRef = useRef<string | null>(null)
+  const activeItemStartRef = useRef<number | null>(null)
+  const skipProductEffectRef = useRef(false)
+  const sessionBusyCountRef = useRef(0)
+
+  const beginSessionOperation = useCallback(() => {
+    sessionBusyCountRef.current += 1
+    if (sessionBusyCountRef.current === 1) {
+      setSessionMutating(true)
+    }
+  }, [])
+
+  const endSessionOperation = useCallback(() => {
+    sessionBusyCountRef.current = Math.max(0, sessionBusyCountRef.current - 1)
+    if (sessionBusyCountRef.current === 0) {
+      setSessionMutating(false)
+    }
+  }, [])
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
@@ -120,12 +144,193 @@ export default function ProbadorVirtualPage() {
   const facingLabel = cameraFacing === "user" ? "Frontal" : "Posterior"
   const canRenderPlayer = sessionActive && Boolean(cameraToken) && activeLensId.length > 0
   const pendingLensId = getLensId(pendingProduct ?? selectedProduct ?? undefined)
+  const sessionReady = Boolean(sessionId)
+
+  const resetSessionState = useCallback(() => {
+    setSessionId(null)
+    setActiveItemId(null)
+    activeProductIdRef.current = null
+    activeItemStartRef.current = null
+    skipProductEffectRef.current = false
+  }, [])
+
+  const getDeviceInfo = useCallback(() => {
+    if (typeof navigator === "undefined") {
+      return { device: undefined, platform: "web" }
+    }
+
+    const agent = navigator.userAgent ?? ""
+    const platform =
+      (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
+      navigator.platform ??
+      "web"
+
+    return {
+      device: agent ? agent.slice(0, 160) : undefined,
+      platform: platform ? platform.slice(0, 80) : undefined,
+    }
+  }, [])
+
+  const finalizeItem = useCallback(
+    async ({
+      itemId,
+      startedAt,
+      status = "exito",
+      endedAt,
+    }: {
+      itemId: string
+      startedAt: number
+      status?: TryOnItemStatus
+      endedAt?: number
+    }) => {
+      if (!sessionId) return
+
+      const finish = endedAt ?? Date.now()
+      const durationSeconds = Math.max(1, Math.round((finish - startedAt) / 1000))
+
+      await apiFetch(`/api/tryon-sessions/${sessionId}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          durationSeconds,
+        }),
+      })
+    },
+    [sessionId],
+  )
+
+  const startTryOnExperience = useCallback(
+    async (product: LensProduct) => {
+      if (sessionId) {
+        return sessionId
+      }
+
+      setSessionMutating(true)
+
+      try {
+        const asset = getPrimaryLensAsset(product)
+        const deviceInfo = getDeviceInfo()
+
+        const response = await apiFetch<{ sessionId: string; itemId?: string }>(`/api/tryon-sessions`, {
+          method: "POST",
+          body: JSON.stringify({
+            productId: product.id,
+            lensAssetId: asset?.id ?? null,
+            device: deviceInfo.device,
+            platform: deviceInfo.platform,
+            origin: "probador-virtual",
+          }),
+        })
+
+        setSessionId(response.sessionId)
+        setActiveItemId(response.itemId ?? null)
+        activeItemStartRef.current = Date.now()
+        activeProductIdRef.current = product.id
+        skipProductEffectRef.current = true
+
+        return response.sessionId
+      } catch (error) {
+        resetSessionState()
+        throw error instanceof Error ? error : new Error("No pudimos iniciar la sesión de try-on")
+      } finally {
+        endSessionOperation()
+      }
+    },
+    [endSessionOperation, getDeviceInfo, resetSessionState, sessionId],
+  )
+
+  const switchTryOnItem = useCallback(
+    async (product: LensProduct) => {
+      if (!sessionId) {
+        throw new Error("No hay una sesión activa")
+      }
+
+      const now = Date.now()
+      const asset = getPrimaryLensAsset(product)
+      const currentItemId = activeItemId
+      const currentStartedAt = activeItemStartRef.current
+
+      if (currentItemId && currentStartedAt) {
+        await finalizeItem({ itemId: currentItemId, startedAt: currentStartedAt, endedAt: now, status: "exito" })
+      }
+
+      const response = await apiFetch<{ itemId: string }>(`/api/tryon-sessions/${sessionId}/items`, {
+        method: "POST",
+        body: JSON.stringify({
+          productId: product.id,
+          lensAssetId: asset?.id ?? null,
+        }),
+      })
+
+      setActiveItemId(response.itemId ?? null)
+      activeItemStartRef.current = now
+      activeProductIdRef.current = product.id
+    },
+    [activeItemId, finalizeItem, sessionId],
+  )
+
+  const stopTryOnSession = useCallback(
+    async (options?: { status?: TryOnItemStatus }) => {
+      if (!sessionId) {
+        resetSessionState()
+        return
+      }
+
+      beginSessionOperation()
+
+      const currentItemId = activeItemId
+      const currentStartedAt = activeItemStartRef.current
+      const now = Date.now()
+      const targetStatus = options?.status ?? "exito"
+      let pendingError: Error | null = null
+
+      if (currentItemId && currentStartedAt) {
+        try {
+          await finalizeItem({
+            itemId: currentItemId,
+            startedAt: currentStartedAt,
+            endedAt: now,
+            status: targetStatus,
+          })
+        } catch (error) {
+          pendingError = error instanceof Error ? error : new Error("No pudimos guardar el último producto probado")
+        }
+      }
+
+      try {
+        await apiFetch(`/api/tryon-sessions/${sessionId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            endedAt: new Date(now).toISOString(),
+          }),
+        })
+      } catch (error) {
+        pendingError = error instanceof Error ? error : new Error("No pudimos cerrar la sesión de try-on")
+      } finally {
+        resetSessionState()
+        endSessionOperation()
+      }
+
+      if (pendingError) {
+        throw pendingError
+      }
+    },
+    [activeItemId, beginSessionOperation, endSessionOperation, finalizeItem, resetSessionState, sessionId],
+  )
 
   const handleSelectProduct = (productId: string) => {
+    if (sessionActive && sessionMutating) {
+      return
+    }
+
     setSelectedProductId(productId)
   }
 
   const handleStartProduct = (productId: string) => {
+    if (sessionMutating) {
+      return
+    }
+
     setSelectedProductId(productId)
 
     if (sessionActive) {
@@ -137,7 +342,11 @@ export default function ProbadorVirtualPage() {
     setPermissionDialogOpen(true)
   }
 
-  const handleConfirmPermission = () => {
+  const handleConfirmPermission = async () => {
+    if (sessionMutating) {
+      return
+    }
+
     const productId = pendingStartProductId ?? selectedProductId
     if (!productId) {
       setPermissionDialogOpen(false)
@@ -145,11 +354,27 @@ export default function ProbadorVirtualPage() {
       return
     }
 
-    setSelectedProductId(productId)
+    const product = products.find((item) => item.id === productId) ?? null
+    if (!product) {
+      setPermissionDialogOpen(false)
+      setPendingStartProductId(null)
+      setLastError("Producto no disponible para try-on")
+      return
+    }
+
+    setSelectedProductId(product.id)
     setSessionActive(true)
     setLastError(null)
     setPermissionDialogOpen(false)
     setPendingStartProductId(null)
+
+    try {
+      await startTryOnExperience(product)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No pudimos iniciar la sesión de try-on"
+      setLastError(message)
+      setSessionActive(false)
+    }
   }
 
   const handleCancelPermission = () => {
@@ -157,9 +382,20 @@ export default function ProbadorVirtualPage() {
     setPendingStartProductId(null)
   }
 
-  const handleStopSession = () => {
+  const handleStopSession = async () => {
+    if (sessionMutating) {
+      return
+    }
+
     setSessionActive(false)
     setLastError(null)
+
+    try {
+      await stopTryOnSession({ status: "exito" })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No pudimos cerrar la sesión"
+      setLastError(message)
+    }
   }
 
   const handleToggleFacing = () => {
@@ -170,10 +406,61 @@ export default function ProbadorVirtualPage() {
     setLastError(null)
   }
 
-  const handlePlayerError = (error: Error) => {
+  const handlePlayerError = async (error: Error) => {
     setLastError(error.message)
     setSessionActive(false)
+
+    try {
+      await stopTryOnSession({ status: "descartado" })
+    } catch (closeError) {
+      console.error("close try-on session after player error", closeError)
+    }
   }
+
+  useEffect(() => {
+    if (!sessionActive || !sessionReady) {
+      return
+    }
+
+    const product = selectedProduct
+    if (!product) {
+      return
+    }
+
+    if (skipProductEffectRef.current) {
+      skipProductEffectRef.current = false
+      return
+    }
+
+    if (product.id === activeProductIdRef.current) {
+      return
+    }
+
+    let cancelled = false
+    beginSessionOperation()
+
+    const run = async () => {
+      try {
+        await switchTryOnItem(product)
+        if (!cancelled) {
+          setLastError(null)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "No pudimos registrar el cambio de prenda"
+          setLastError(message)
+        }
+      } finally {
+        endSessionOperation()
+      }
+    }
+
+    run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [beginSessionOperation, endSessionOperation, sessionActive, sessionReady, selectedProduct, switchTryOnItem])
 
   return (
     <div className="min-h-screen bg-background">
@@ -273,7 +560,7 @@ export default function ProbadorVirtualPage() {
                     size="sm"
                     className="gap-2"
                     onClick={handleToggleFacing}
-                    disabled={!sessionActive}
+                    disabled={!sessionActive || sessionMutating}
                   >
                     <FlipHorizontal className="h-4 w-4" />
                     Cambiar cámara
@@ -283,7 +570,7 @@ export default function ProbadorVirtualPage() {
                     size="sm"
                     className="gap-2"
                     onClick={handleStopSession}
-                    disabled={!sessionActive}
+                    disabled={!sessionActive || sessionMutating}
                   >
                     <RefreshCcw className="h-4 w-4" />
                     Reiniciar
@@ -373,7 +660,7 @@ export default function ProbadorVirtualPage() {
                           event.stopPropagation()
                           handleStartProduct(product.id)
                         }}
-                        disabled={isActive}
+                        disabled={isActive || sessionMutating}
                       >
                         {isActive ? "En uso" : sessionActive ? "Aplicar" : "Probar"}
                       </Button>
