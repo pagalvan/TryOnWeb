@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { ensureAuthenticated } from "@/lib/auth/session"
 import { startTryOnSessionSchema } from "@/lib/schemas/tryon"
+import { createClient } from "@supabase/supabase-js"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
+import { serverEnv } from "@/lib/env.server"
 
 export const runtime = "nodejs"
 
@@ -18,10 +20,21 @@ export async function POST(request: NextRequest) {
     return response
   }
 
-  const supabase = getSupabaseAdminClient()
+  // Explicitly create admin client to ensure service role is used
+  const supabase = createClient(serverEnv.supabaseUrl, serverEnv.supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+
+  const isServiceKey = serverEnv.supabaseServiceKey.startsWith("eyJ") // JWT usually starts with eyJ
+  const isAnonKey = serverEnv.supabaseAnonKey === serverEnv.supabaseServiceKey
+  console.log("Using Service Key:", isServiceKey, "Is Same as Anon:", isAnonKey)
 
   try {
     const payload = await request.json().catch(() => null)
+    console.log("TryOn Session Payload:", JSON.stringify(payload, null, 2))
     const parsed = startTryOnSessionSchema.safeParse(payload)
 
     if (!parsed.success) {

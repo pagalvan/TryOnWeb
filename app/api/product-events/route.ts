@@ -20,15 +20,21 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdminClient()
   const user = await getAuthenticatedUser()
 
-  const { error } = await supabase.from("product_events").insert({
+  const eventData: any = {
     prenda_id: productId,
     event_type: eventType,
     metadata: metadata && Object.keys(metadata).length > 0 ? metadata : null,
-    profile_id: user?.id ?? null,
-  })
+  }
+
+  if (user?.id) {
+    eventData.profile_id = user.id
+  }
+
+  const { error } = await supabase.from("product_events").insert(eventData)
 
   if (error) {
-    return NextResponse.json({ message: "No pudimos registrar el evento" }, { status: 400 })
+    console.error("Error registering event:", error)
+    return NextResponse.json({ message: "No pudimos registrar el evento", details: error.message }, { status: 400 })
   }
 
   return NextResponse.json({ message: "Evento registrado" })

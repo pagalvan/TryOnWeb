@@ -16,6 +16,7 @@ import {
 	Pencil,
 	Trash2,
 	Warehouse,
+	Wand2,
 } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -451,14 +452,6 @@ export default function InventarioPage() {
 								<Plus className="h-4 w-4" />
 								Nueva bodega
 							</Button>
-							<Button variant="outline" className="gap-2 bg-transparent">
-								<Filter className="h-4 w-4" />
-								Filtros
-							</Button>
-							<Button variant="outline" className="gap-2 bg-transparent">
-								<Download className="h-4 w-4" />
-								Exportar
-							</Button>
 							<Button
 								className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
 								onClick={abrirModalNuevoProducto}
@@ -796,7 +789,25 @@ function ProductDialog({
 
 					<div className="grid gap-2">
 						<Label htmlFor="sku">SKU</Label>
-						<Input id="sku" value={productForm.sku} onChange={handleInputChange("sku")} />
+						<div className="flex gap-2">
+							<Input id="sku" value={productForm.sku} onChange={handleInputChange("sku")} placeholder="Código único" />
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								onClick={() => {
+									const cat = categorias.find((c) => c.id === productForm.categoriaId)
+									const catPrefix = (cat?.nombre || "GEN").substring(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "X")
+									const namePrefix = (productForm.nombre || "PRO").substring(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "X")
+									const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+									const newSku = `${catPrefix}-${namePrefix}-${random}`
+									handleChange("sku", newSku)
+								}}
+								title="Generar SKU automático"
+							>
+								<Wand2 className="h-4 w-4" />
+							</Button>
+						</div>
 					</div>
 
 					<div className="grid gap-2">

@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
-import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
 import { apiFetch } from "@/lib/api-client"
 import type { SettingsMetrics, SettingsResponseData } from "@/lib/types/settings"
@@ -644,8 +643,6 @@ export default function ConfiguracionPage() {
           </div>
         )}
       </main>
-
-      <Toaster />
     </div>
   )
 }

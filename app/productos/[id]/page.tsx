@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils"
 import { CameraKitPlayer, type CameraKitPlayerHandle } from "@/components/camera-kit/CameraKitPlayer"
 import { getCameraKitToken, CAMERA_KIT_DEFAULT_LENS_GROUP_ID } from "@/lib/camera-kit"
 import { supabase } from "@/lib/supabase/client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type InventarioItem = {
   id: string
@@ -56,6 +59,7 @@ type ProductoDetalle = {
 
 export default function ProductoDetallePage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [producto, setProducto] = useState<ProductoDetalle | null>(null)
   const [loading, setLoading] = useState(true)
@@ -75,6 +79,24 @@ export default function ProductoDetallePage() {
   const [recommendations, setRecommendations] = useState<any | null>(null)
   const [recommendationOpen, setRecommendationOpen] = useState(false)
   const playerRef = useRef<CameraKitPlayerHandle>(null)
+  const [lastSnapshotUrl, setLastSnapshotUrl] = useState<string | null>(null)
+
+  // Try-On Session State
+  const sessionIdRef = useRef<string | null>(null)
+  const itemIdRef = useRef<string | null>(null)
+  const sessionStartTimeRef = useRef<number | null>(null)
+
+  // Measurements State
+  const [measurementsOpen, setMeasurementsOpen] = useState(false)
+  const [measurements, setMeasurements] = useState({
+    altura_cm: '',
+    peso_kg: '',
+    pecho_cm: '',
+    cintura_cm: '',
+    cadera_cm: '',
+    complexion: 'media'
+  })
+  const [savingMeasurements, setSavingMeasurements] = useState(false)
 
   const cameraToken = getCameraKitToken()
   const lensGroupId = CAMERA_KIT_DEFAULT_LENS_GROUP_ID
@@ -105,6 +127,13 @@ export default function ProductoDetallePage() {
 
   const refreshFavorite = useCallback(async () => {
     if (!productoId) {
+      setIsFavorited(false)
+      return
+    }
+
+    // Check if user is logged in before fetching to avoid 401 errors
+    const role = localStorage.getItem("userRole")
+    if (!role) {
       setIsFavorited(false)
       return
     }
@@ -238,7 +267,10 @@ export default function ProductoDetallePage() {
       }
 
       if (shared) {
-        await registerEvent("share", { method: shareMethod ?? "unknown" })
+        // Don't block or error if analytics fails
+        registerEvent("share", { method: shareMethod ?? "unknown" }).catch((err) => 
+          console.warn("Analytics warning:", err)
+        )
       } else {
         toast({
           title: "No pudimos compartir",
@@ -267,6 +299,7 @@ export default function ProductoDetallePage() {
   }, [producto])
 
   const lensId = useMemo(() => getProductLensId(producto), [producto])
+  const lensAsset = useMemo(() => getPrimaryLensAsset(producto), [producto])
   const hasLens = lensId.length > 0
 
   useEffect(() => {
@@ -285,14 +318,23 @@ export default function ProductoDetallePage() {
     })
   }
 
-  const handleStartAr = () => {
+  const handleStartAr = async () => {
+    // Check if user is logged in via localStorage (client-side check)
+    const role = localStorage.getItem("userRole")
+    if (!role) {
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname)}&reason=tryon`)
+      return
+    }
+
     if (!canActivateAr) return
     setArActive(true)
     scrollToMedia()
+    startSession()
   }
 
   const handleStopAr = () => {
     setArActive(false)
+    endSession()
   }
 
   const handlePlayerError = (error: Error) => {
@@ -328,11 +370,16 @@ export default function ProductoDetallePage() {
         .from('tryon-snapshots')
         .getPublicUrl(fileName)
 
+      setLastSnapshotUrl(publicUrl)
+
       // 3. Call AI API
       const response = await fetch('/api/recommendations/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: publicUrl }),
+        body: JSON.stringify({ 
+          imageUrl: publicUrl,
+          measurements: measurements.altura_cm ? measurements : undefined
+        }),
       })
 
       if (!response.ok) throw new Error("Error al analizar la imagen con IA")
@@ -356,6 +403,141 @@ export default function ProductoDetallePage() {
       setAnalyzing(false)
     }
   }
+
+
+  useEffect(() => {
+    const fetchMeasurements = async () => {
+      try {
+        const response = await apiFetch<{ measurements: any }>('/api/user/measurements')
+        if (response.measurements) {
+          setMeasurements({
+            altura_cm: response.measurements.altura_cm || '',
+            peso_kg: response.measurements.peso_kg || '',
+            pecho_cm: response.measurements.pecho_cm || '',
+            cintura_cm: response.measurements.cintura_cm || '',
+            cadera_cm: response.measurements.cadera_cm || '',
+            complexion: response.measurements.complexion || 'media'
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching measurements", error)
+      }
+    }
+    if (userRole) {
+      fetchMeasurements()
+    }
+  }, [userRole])
+
+  const handleSaveMeasurements = async () => {
+    setSavingMeasurements(true)
+    try {
+      const response = await apiFetch('/api/user/measurements', {
+        method: 'POST',
+        body: JSON.stringify(measurements)
+      })
+      toast({ title: "Medidas guardadas", description: "Tus medidas se usarán para recomendaciones más precisas." })
+      setMeasurementsOpen(false)
+    } catch (error) {
+      toast({
+        title: "Error al guardar",
+        description: error instanceof Error ? error.message : "Intenta nuevamente",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingMeasurements(false)
+    }
+  }
+
+  const startSession = async () => {
+    if (!productoId) return
+
+    const validLensAssetId = lensAsset?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lensAsset.id) 
+      ? lensAsset.id 
+      : undefined
+
+    try {
+      const response = await apiFetch<{ sessionId: string; itemId: string }>("/api/tryon-sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: productoId,
+          lensAssetId: validLensAssetId,
+          device: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+          platform: "web",
+          origin: "product-detail",
+        }),
+      })
+
+      if (response.sessionId && response.itemId) {
+        sessionIdRef.current = response.sessionId
+        itemIdRef.current = response.itemId
+        sessionStartTimeRef.current = Date.now()
+      }
+    } catch (error) {
+      console.error("Failed to start try-on session", error)
+      if (error instanceof Error && (error.message === "No autorizado" || error.message.includes("401"))) {
+        toast({
+          title: "Sesión expirada",
+          description: "Por favor inicia sesión nuevamente.",
+        })
+        // Clear invalid state
+        localStorage.removeItem("userRole")
+        router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)
+      }
+    }
+  }
+
+  const endSession = async () => {
+    if (!sessionIdRef.current) return
+
+    const duration = sessionStartTimeRef.current ? (Date.now() - sessionStartTimeRef.current) / 1000 : 0
+
+    try {
+      await apiFetch(`/api/tryon-sessions/${sessionIdRef.current}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          endedAt: new Date().toISOString(),
+          lastItem: itemIdRef.current
+            ? {
+                itemId: itemIdRef.current,
+                status: "exito", // Assuming success if they closed it manually
+                durationSeconds: duration,
+              }
+            : undefined,
+        }),
+      })
+    } catch (error) {
+      console.error("Failed to end try-on session", error)
+    } finally {
+      sessionIdRef.current = null
+      itemIdRef.current = null
+      sessionStartTimeRef.current = null
+    }
+  }
+
+  // End session on unmount if active
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current) {
+        // We can't await in cleanup, but we can trigger the call
+        const sessionId = sessionIdRef.current
+        const itemId = itemIdRef.current
+        const startTime = sessionStartTimeRef.current
+        const duration = startTime ? (Date.now() - startTime) / 1000 : 0
+        
+        // Use beacon or fetch with keepalive if possible, but simple fetch is better than nothing
+        // Note: apiFetch might not work if component unmounts quickly, but let's try
+        fetch(`/api/tryon-sessions/${sessionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                endedAt: new Date().toISOString(),
+                lastItem: itemId ? { itemId, status: "parcial", durationSeconds: duration } : undefined
+            }),
+            keepalive: true
+        }).catch(e => console.error("Cleanup session end failed", e))
+      }
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -486,6 +668,18 @@ export default function ProductoDetallePage() {
                 </Button>
               )}
 
+              {userRole === "cliente" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 min-w-[160px]"
+                  onClick={() => setMeasurementsOpen(true)}
+                >
+                  <Ruler className="mr-2 h-5 w-5" />
+                  Mis Medidas
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant={isFavorited ? "secondary" : "outline"}
@@ -596,7 +790,13 @@ export default function ProductoDetallePage() {
                 <p className="text-sm text-muted-foreground mb-3">{recommendations.colorimetry.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {recommendations.colorimetry.bestColors?.map((color: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-xs bg-background/80">{color}</Badge>
+                    <Badge 
+                      key={i} 
+                      variant="secondary" 
+                      className="text-xs bg-background/80"
+                    >
+                      {color}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -626,24 +826,128 @@ export default function ProductoDetallePage() {
               <Wand2 className="h-4 w-4 text-foreground" />
               Completar el Look
             </h4>
-            {(recommendations?.styleRecommendations || (Array.isArray(recommendations) ? recommendations : []))?.map((rec: any, index: number) => (
-              <div key={index} className="rounded-lg border p-4 bg-muted/30">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-semibold text-sm">{rec.name}</h4>
-                  <Badge variant="outline" className="text-xs">{rec.category}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">{rec.reason}</p>
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-cyan-500 rounded-full" 
-                      style={{ width: `${rec.confidence}%` }}
-                    />
+            {(recommendations?.styleRecommendations || (Array.isArray(recommendations) ? recommendations : []))?.map((rec: any, index: number) => {
+              const CardContent = () => (
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-sm">{rec.name}</h4>
+                    <Badge variant="outline" className="text-xs">{rec.category}</Badge>
                   </div>
-                  <span className="text-xs font-medium text-muted-foreground">{rec.confidence}% Match</span>
+                  <p className="text-sm text-muted-foreground mb-3">{rec.reason}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-cyan-500 rounded-full" 
+                        style={{ width: `${rec.confidence}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground">{rec.confidence}% Match</span>
+                  </div>
+                </>
+              );
+
+              return rec.id ? (
+                <Link 
+                  key={index} 
+                  href={`/productos/${rec.id}`}
+                  className="block rounded-lg border p-4 bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  <CardContent />
+                </Link>
+              ) : (
+                <div key={index} className="rounded-lg border p-4 bg-muted/30">
+                  <CardContent />
                 </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={measurementsOpen} onOpenChange={setMeasurementsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mis Medidas Corporales</DialogTitle>
+            <DialogDescription>
+              Ingresa tus medidas para obtener recomendaciones de talla más precisas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="altura">Altura (cm)</Label>
+                <Input 
+                  id="altura" 
+                  type="number" 
+                  placeholder="170" 
+                  value={measurements.altura_cm}
+                  onChange={(e) => setMeasurements({...measurements, altura_cm: e.target.value})}
+                />
               </div>
-            ))}
+              <div className="space-y-2">
+                <Label htmlFor="peso">Peso (kg)</Label>
+                <Input 
+                  id="peso" 
+                  type="number" 
+                  placeholder="70" 
+                  value={measurements.peso_kg}
+                  onChange={(e) => setMeasurements({...measurements, peso_kg: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pecho">Pecho (cm)</Label>
+                <Input 
+                  id="pecho" 
+                  type="number" 
+                  placeholder="90" 
+                  value={measurements.pecho_cm}
+                  onChange={(e) => setMeasurements({...measurements, pecho_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cintura">Cintura (cm)</Label>
+                <Input 
+                  id="cintura" 
+                  type="number" 
+                  placeholder="80" 
+                  value={measurements.cintura_cm}
+                  onChange={(e) => setMeasurements({...measurements, cintura_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cadera">Cadera (cm)</Label>
+                <Input 
+                  id="cadera" 
+                  type="number" 
+                  placeholder="95" 
+                  value={measurements.cadera_cm}
+                  onChange={(e) => setMeasurements({...measurements, cadera_cm: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="complexion">Complexión</Label>
+              <Select 
+                value={measurements.complexion} 
+                onValueChange={(val) => setMeasurements({...measurements, complexion: val})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tu complexión" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="delgada">Delgada</SelectItem>
+                  <SelectItem value="media">Media</SelectItem>
+                  <SelectItem value="atletica">Atlética</SelectItem>
+                  <SelectItem value="robusta">Robusta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSaveMeasurements} disabled={savingMeasurements} className="w-full mt-4">
+              {savingMeasurements ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Guardar Medidas
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

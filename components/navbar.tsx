@@ -52,7 +52,7 @@ export function Navbar() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href={userRole === "admin" ? "/dashboard" : "/"} className="flex items-center" prefetch={true}>
-            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain" priority />
+            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain h-8 w-auto" priority />
           </Link>
 
           {/* Desktop Navigation */}
@@ -101,7 +101,7 @@ export function Navbar() {
               <SheetContent className="w-[300px]">
                 <div className="flex flex-col gap-6 mt-8">
                   {/* Logo en mobile */}
-                  <Image src="/logo.png" alt="TryOnWeb Logo" width={100} height={40} className="object-contain mb-4" />
+                  <Image src="/logo.png" alt="TryOnWeb Logo" width={100} height={40} className="object-contain mb-4 h-10 w-auto" />
 
                   {/* Links */}
                   <div className="flex flex-col gap-4">
