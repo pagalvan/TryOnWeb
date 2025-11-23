@@ -4,17 +4,25 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2 } from "lucide-react"
+import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { apiFetch } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { CameraKitPlayer } from "@/components/camera-kit/CameraKitPlayer"
+import { CameraKitPlayer, type CameraKitPlayerHandle } from "@/components/camera-kit/CameraKitPlayer"
 import { getCameraKitToken, CAMERA_KIT_DEFAULT_LENS_GROUP_ID } from "@/lib/camera-kit"
+import { supabase } from "@/lib/supabase/client"
 
 type InventarioItem = {
   id: string
@@ -61,6 +69,12 @@ export default function ProductoDetallePage() {
   const [arActive, setArActive] = useState(false)
   const [cameraFacing, setCameraFacing] = useState<"user" | "environment">("user")
   const { toast } = useToast()
+
+  // AI Recommendations State
+  const [analyzing, setAnalyzing] = useState(false)
+  const [recommendations, setRecommendations] = useState<any | null>(null)
+  const [recommendationOpen, setRecommendationOpen] = useState(false)
+  const playerRef = useRef<CameraKitPlayerHandle>(null)
 
   const cameraToken = getCameraKitToken()
   const lensGroupId = CAMERA_KIT_DEFAULT_LENS_GROUP_ID
@@ -290,6 +304,59 @@ export default function ProductoDetallePage() {
     })
   }
 
+  const handleAnalyze = async () => {
+    if (!playerRef.current) return
+    setAnalyzing(true)
+    
+    try {
+      // 1. Capture Snapshot
+      const blob = await playerRef.current.captureSnapshot()
+      if (!blob) throw new Error("No se pudo capturar la imagen de la cámara")
+
+      // 2. Upload to Supabase
+      const fileName = `snapshot-${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('tryon-snapshots')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: false
+        })
+
+      if (uploadError) throw new Error(`Error al subir imagen: ${uploadError.message}`)
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('tryon-snapshots')
+        .getPublicUrl(fileName)
+
+      // 3. Call AI API
+      const response = await fetch('/api/recommendations/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: publicUrl }),
+      })
+
+      if (!response.ok) throw new Error("Error al analizar la imagen con IA")
+
+      const result = await response.json()
+      if (result.styleRecommendations || result.recommendations) {
+        setRecommendations(result)
+        setRecommendationOpen(true)
+      } else {
+        throw new Error("No se recibieron recomendaciones válidas")
+      }
+
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Error al analizar",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      })
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -335,6 +402,7 @@ export default function ProductoDetallePage() {
             <div className="aspect-square bg-accent rounded-2xl overflow-hidden mb-4 relative">
               {showCameraPlayer ? (
                 <CameraKitPlayer
+                  ref={playerRef}
                   key={`${producto.id}-hero-${cameraFacing}`}
                   apiToken={cameraToken}
                   lensId={lensId}
@@ -386,7 +454,7 @@ export default function ProductoDetallePage() {
                   type="button"
                   className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
                   onClick={arActive ? handleStopAr : handleStartAr}
-                  disabled={!canActivateAr}
+                  disabled={!canActivateAr || analyzing}
                 >
                   <Eye className="mr-2 h-5 w-5" />
                   {arActive ? "Cerrar AR" : "Probar con AR"}
@@ -402,11 +470,27 @@ export default function ProductoDetallePage() {
                 </Button>
               )}
 
+              {arActive && (
+                <Button
+                  type="button"
+                  className="flex-1 min-w-[200px] bg-cyan-600 hover:bg-cyan-700 text-white"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                >
+                  {analyzing ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-5 w-5" />
+                  )}
+                  {analyzing ? "Analizando..." : "Analizar Look con IA"}
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant={isFavorited ? "secondary" : "outline"}
                 className="flex-1 min-w-[160px]"
-                disabled={favoriteLoading}
+                disabled={favoriteLoading || analyzing}
                 onClick={handleFavorite}
               >
                 {favoriteLoading ? (
@@ -486,6 +570,83 @@ export default function ProductoDetallePage() {
         </div>
 
       </main>
+
+      <Dialog open={recommendationOpen} onOpenChange={setRecommendationOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-cyan-600" />
+              Recomendaciones de Estilo
+            </DialogTitle>
+            <DialogDescription>
+              Basado en tu look actual, nuestra IA sugiere:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Colorimetry Section */}
+            {recommendations?.colorimetry && (
+              <div className="rounded-lg border p-4 bg-cyan-50/50 dark:bg-cyan-900/10">
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-cyan-600" /> 
+                  Análisis de Colorimetría
+                </h4>
+                <div className="mb-2">
+                  <span className="font-medium text-sm">{recommendations.colorimetry.season}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">{recommendations.colorimetry.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {recommendations.colorimetry.bestColors?.map((color: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-xs bg-background/80">{color}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Size Section */}
+            {recommendations?.sizeRecommendation && (
+              <div className="rounded-lg border p-4 bg-blue-50/50 dark:bg-blue-900/10">
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Ruler className="h-4 w-4 text-blue-600" />
+                  Recomendación de Talla
+                </h4>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="font-medium text-sm">{recommendations.sizeRecommendation.fit}</span>
+                  {recommendations.sizeRecommendation.sizeRange && (
+                    <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
+                      {recommendations.sizeRecommendation.sizeRange}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{recommendations.sizeRecommendation.advice}</p>
+              </div>
+            )}
+
+            {/* Style Recommendations */}
+            <h4 className="font-semibold text-sm mt-4 mb-2 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-foreground" />
+              Completar el Look
+            </h4>
+            {(recommendations?.styleRecommendations || (Array.isArray(recommendations) ? recommendations : []))?.map((rec: any, index: number) => (
+              <div key={index} className="rounded-lg border p-4 bg-muted/30">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-semibold text-sm">{rec.name}</h4>
+                  <Badge variant="outline" className="text-xs">{rec.category}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">{rec.reason}</p>
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-cyan-500 rounded-full" 
+                      style={{ width: `${rec.confidence}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">{rec.confidence}% Match</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, type CSSProperties } from "react"
 
 type CameraFacing = "user" | "environment"
 
@@ -51,9 +51,13 @@ export interface CameraKitPlayerProps {
   onError?: (error: Error) => void
 }
 
+export interface CameraKitPlayerHandle {
+  captureSnapshot: () => Promise<Blob | null>
+}
+
 const facingToCameraKit = (facing: CameraFacing) => (facing === "environment" ? "back" : "front")
 
-export function CameraKitPlayer({
+export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayerProps>(({
   apiToken,
   lensId,
   lensGroupId,
@@ -62,7 +66,7 @@ export function CameraKitPlayer({
   style,
   onReady,
   onError,
-}: CameraKitPlayerProps) {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const sessionRef = useRef<CameraKitSession | null>(null)
   const sourceRef = useRef<CameraKitSource | null>(null)
@@ -74,6 +78,31 @@ export function CameraKitPlayer({
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [lensStatus, setLensStatus] = useState<LensStatus>("idle")
   const [lensError, setLensError] = useState<string | null>(null)
+
+  // Use refs for callbacks to avoid re-triggering effects
+  const onReadyRef = useRef(onReady)
+  const onErrorRef = useRef(onError)
+
+  useEffect(() => {
+    onReadyRef.current = onReady
+    onErrorRef.current = onError
+  }, [onReady, onError])
+
+  useImperativeHandle(ref, () => ({
+    captureSnapshot: async () => {
+      if (!canvasRef.current) return null
+      try {
+        return new Promise<Blob | null>((resolve) => {
+          canvasRef.current?.toBlob((blob) => {
+            resolve(blob)
+          }, 'image/jpeg', 0.95)
+        })
+      } catch (e) {
+        console.error("Snapshot failed (likely offscreen canvas):", e)
+        return null
+      }
+    }
+  }))
 
   useEffect(() => {
     let isCancelled = false
@@ -141,7 +170,7 @@ export function CameraKitPlayer({
 
         setBootstrapping(false)
         setSessionReady(true)
-        onReady?.()
+        onReadyRef.current?.()
       } catch (error) {
         if (isCancelled) return
 
@@ -152,7 +181,7 @@ export function CameraKitPlayer({
 
         setCameraError(message)
         setBootstrapping(false)
-        onError?.(error instanceof Error ? error : new Error(String(error)))
+        onErrorRef.current?.(error instanceof Error ? error : new Error(String(error)))
       }
     }
 
@@ -182,7 +211,7 @@ export function CameraKitPlayer({
 
       cameraKitRef.current = null
     }
-  }, [apiToken, cameraFacing, onReady, onError])
+  }, [apiToken, cameraFacing]) // Removed onReady/onError from deps
 
   useEffect(() => {
     const applyLens = async () => {
@@ -283,12 +312,12 @@ export function CameraKitPlayer({
           error instanceof Error ? error.message : "No se pudo cargar el lente de realidad aumentada"
         setLensStatus("error")
         setLensError(message)
-        onError?.(error instanceof Error ? error : new Error(String(error)))
+        onErrorRef.current?.(error instanceof Error ? error : new Error(String(error)))
       }
     }
 
     applyLens()
-  }, [lensGroupId, lensId, onError, sessionReady])
+  }, [lensGroupId, lensId, sessionReady]) // Removed onError from deps
 
   const shouldShowOverlay = bootstrapping || Boolean(cameraError) || lensStatus === "loading" || Boolean(lensError)
 
@@ -307,4 +336,4 @@ export function CameraKitPlayer({
       </div>
     </div>
   )
-}
+})
