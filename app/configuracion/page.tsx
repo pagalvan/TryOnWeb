@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
@@ -18,6 +17,7 @@ import { LensCard } from "@/components/settings/lens-card"
 import { SecurityCard } from "@/components/settings/security-card"
 import { MetricsCard } from "@/components/settings/metrics-card"
 import { type SettingsFormState, type PasswordFormState } from "@/components/settings/types"
+import { AdminGuard } from "@/components/auth/admin-guard"
 
 export default function ConfiguracionPage() {
   const router = useRouter()
@@ -145,10 +145,10 @@ export default function ConfiguracionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <AdminGuard>
+      <div className="min-h-screen bg-background">
 
-      <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -200,9 +200,10 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </AdminGuard>
   )
 }

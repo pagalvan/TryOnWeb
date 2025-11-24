@@ -2,7 +2,6 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Package, ArrowLeft, ShoppingBag } from "lucide-react"
 
-import { Navbar } from "@/components/navbar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -45,7 +44,6 @@ export default async function CategoriaDetallePage({ params }: PageParams) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center justify-between">

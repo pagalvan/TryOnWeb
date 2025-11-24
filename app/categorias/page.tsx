@@ -14,7 +14,6 @@ import {
   AlertCircle,
 } from "lucide-react"
 
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +39,7 @@ import {
   type CategoryFormState,
   type IconValue,
 } from "@/components/categories/types"
+import { AdminGuard } from "@/components/auth/admin-guard"
 
 export default function CategoriasPage() {
   const router = useRouter()
@@ -147,10 +147,10 @@ export default function CategoriasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <AdminGuard>
+      <div className="min-h-screen bg-background">
 
-      <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -263,15 +263,16 @@ export default function CategoriasPage() {
         )}
       </main>
 
-      <CategoryDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogChange}
-        formState={formState}
-        onFormChange={setFormState}
-        onSubmit={handleSubmit}
-        saving={saving}
-        isEditing={isEditing}
-      />
-    </div>
+        <CategoryDialog
+          open={dialogOpen}
+          onOpenChange={handleDialogChange}
+          formState={formState}
+          onFormChange={setFormState}
+          onSubmit={handleSubmit}
+          saving={saving}
+          isEditing={isEditing}
+        />
+      </div>
+    </AdminGuard>
   )
 }

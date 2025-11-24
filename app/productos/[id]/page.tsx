@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler } from "lucide-react"
 
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -553,7 +552,7 @@ export default function ProductoDetallePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+
         <main className="container mx-auto px-4 py-16 flex flex-col items-center gap-4 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin" />
           Cargando producto...
@@ -565,7 +564,7 @@ export default function ProductoDetallePage() {
   if (error || !producto) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+
         <main className="container mx-auto px-4 py-16 text-center">
           <h2 className="font-display text-3xl text-foreground mb-4">No pudimos cargar el producto</h2>
           <p className="text-muted-foreground mb-6">{error ?? "Revisa el enlace e intenta nuevamente."}</p>
@@ -579,7 +578,6 @@ export default function ProductoDetallePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
 
       <main className="container mx-auto px-4 py-8">
         <Link

@@ -17,7 +17,6 @@ import {
   Warehouse,
 } from "lucide-react"
 
-import { Navbar } from "@/components/navbar"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,6 +49,7 @@ import {
   buildLensAssetPayload,
   getProductLensId,
 } from "@/components/inventory/utils"
+import { AdminGuard } from "@/components/auth/admin-guard"
 
 const ALL_LOCATIONS_VALUE = "all"
 
@@ -380,11 +380,11 @@ export default function InventarioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      <Navbar />
+    <AdminGuard>
+      <div className="min-h-screen bg-background overflow-x-hidden">
 
-      <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="h-1 w-8 bg-primary rounded-full" />
@@ -666,21 +666,20 @@ export default function InventarioPage() {
         }
       />
 
-      <LocationDialog
-        open={locationDialogOpen}
-        onOpenChange={(open: boolean) => {
-          setLocationDialogOpen(open)
-          if (!open) {
-            setLocationDialogContext(null)
-          }
-        }}
-        onCreated={handleLocationCreated}
-      />
-    </div>
+        <LocationDialog
+          open={locationDialogOpen}
+          onOpenChange={(open: boolean) => {
+            setLocationDialogOpen(open)
+            if (!open) {
+              setLocationDialogContext(null)
+            }
+          }}
+          onCreated={handleLocationCreated}
+        />
+      </div>
+    </AdminGuard>
   )
-}
-
-function sortLocations(locations: InventoryLocation[]) {
+}function sortLocations(locations: InventoryLocation[]) {
   return [...locations].sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }))
 }
 

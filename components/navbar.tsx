@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { LoginDialog } from "@/components/auth/login-dialog"
+import { AccountSelectionDialog } from "@/components/auth/account-selection-dialog"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -41,6 +42,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showAccountSelector, setShowAccountSelector] = useState(false)
   const [accounts, setAccounts] = useState<{ name: string; email: string; role: "cliente" | "admin"; token: string }[]>([])
   const [isSwitching, setIsSwitching] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -53,6 +55,17 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Recover name from accounts if missing
+  useEffect(() => {
+    if (userEmail && (!userName || userName === "Administrador" || userName === "Cliente") && accounts.length > 0) {
+      const account = accounts.find(a => a.email === userEmail)
+      if (account && account.name) {
+        setUserName(account.name)
+        localStorage.setItem("userName", account.name)
+      }
+    }
+  }, [userEmail, userName, accounts])
 
   useEffect(() => {
     const role = localStorage.getItem("userRole") as "cliente" | "admin" | null
@@ -83,26 +96,34 @@ export function Navbar() {
       try {
         const response = await apiFetch<{ data: { display_name: string; email: string; role: "cliente" | "admin" } | null }>("/api/auth/me")
         if (response.data) {
-          setUserName(response.data.display_name)
+          if (response.data.display_name) {
+            setUserName(response.data.display_name)
+            localStorage.setItem("userName", response.data.display_name)
+          }
           setUserEmail(response.data.email)
           setUserRole(response.data.role)
           localStorage.setItem("userRole", response.data.role)
-          localStorage.setItem("userName", response.data.display_name)
         } else {
+          // Only clear if we don't have a role in localStorage to avoid flickering during switch
+          if (!localStorage.getItem("userRole")) {
+            localStorage.removeItem("userRole")
+            localStorage.removeItem("userName")
+            setUserRole(null)
+            setUserName(null)
+            setUserEmail(null)
+          }
+        }
+      } catch (error) {
+        // Silently fail if not authenticated
+        console.debug("User not authenticated", error)
+        // Only clear if we don't have a role in localStorage to avoid flickering during switch
+        if (!localStorage.getItem("userRole")) {
           localStorage.removeItem("userRole")
           localStorage.removeItem("userName")
           setUserRole(null)
           setUserName(null)
           setUserEmail(null)
         }
-      } catch (error) {
-        // Silently fail if not authenticated
-        console.debug("User not authenticated", error)
-        localStorage.removeItem("userRole")
-        localStorage.removeItem("userName")
-        setUserRole(null)
-        setUserName(null)
-        setUserEmail(null)
       }
     }
     
@@ -132,6 +153,13 @@ export function Navbar() {
 
       setIsSwitching(true)
       try {
+          // Find the target account to update localStorage immediately
+          const targetAccount = accounts.find(a => a.token === token)
+          if (targetAccount) {
+            localStorage.setItem("userRole", targetAccount.role)
+            localStorage.setItem("userName", targetAccount.name)
+          }
+
           await apiFetch("/api/auth/switch-session", {
               method: "POST",
               body: JSON.stringify({ token })
@@ -147,10 +175,27 @@ export function Navbar() {
       }
   }
 
-  const handleRemoveAccount = (email: string) => {
+  const handleRemoveAccount = async (email: string) => {
     const newAccounts = accounts.filter(a => a.email !== email)
     setAccounts(newAccounts)
     localStorage.setItem("savedAccounts", JSON.stringify(newAccounts))
+    
+    // If removing the current account, log out
+    if (email === userEmail) {
+      try {
+        await apiFetch("/api/auth/logout", { method: "POST" })
+      } catch (error) {
+        console.error(error)
+      }
+      localStorage.removeItem("userRole")
+      localStorage.removeItem("userName")
+      setUserRole(null)
+      setUserName(null)
+      setUserEmail(null)
+      
+      setShowAccountSelector(true)
+      router.push("/")
+    }
   }
 
   const publicLinks = [
@@ -167,6 +212,10 @@ export function Navbar() {
   ]
 
   const links = userRole === "admin" ? adminLinks : publicLinks
+
+  if (pathname === "/login" || pathname === "/registro") {
+    return null
+  }
 
   return (
     <>
@@ -263,7 +312,7 @@ export function Navbar() {
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
-                          {userName 
+                          {userName && userName.length > 0
                             ? userName.slice(0, 2).toUpperCase() 
                             : (userRole === 'admin' ? 'AD' : 'CL')}
                         </AvatarFallback>
@@ -449,6 +498,21 @@ export function Navbar() {
       </AlertDialog>
 
       <LoginDialog open={showLoginModal} onOpenChange={setShowLoginModal} />
+      
+      <AccountSelectionDialog 
+        open={showAccountSelector} 
+        onOpenChange={setShowAccountSelector}
+        accounts={accounts}
+        onSelectAccount={(token) => {
+            setShowAccountSelector(false)
+            handleSwitchAccount(token)
+        }}
+        onAddAccount={() => {
+            setShowAccountSelector(false)
+            setShowLoginModal(true)
+        }}
+        onRemoveAccount={handleRemoveAccount}
+      />
     </nav>
     <div className="h-14" aria-hidden="true" />
     </>

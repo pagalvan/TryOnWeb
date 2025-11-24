@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react"
 import { useSearchParams } from "next/navigation"
 import { ChevronDown, Loader2, Plus, Search, Sparkles, Star, TrendingUp, SlidersHorizontal, ArrowUpDown } from "lucide-react"
 
-import { Navbar } from "@/components/navbar"
 import { apiFetch } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -248,7 +247,6 @@ export default function ProductosPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row">

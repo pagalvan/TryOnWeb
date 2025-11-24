@@ -4,7 +4,6 @@ import type { DashboardContext, DashboardSectionId } from "@/app/dashboard/_data
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters"
 import { DashboardExportButton } from "@/components/dashboard/dashboard-export-button"
 import { DashboardSectionNav } from "@/components/dashboard/dashboard-section-nav"
-import { Navbar } from "@/components/navbar"
 
 type DashboardShellProps = {
   context: DashboardContext
@@ -26,7 +25,6 @@ export function DashboardShell({ context, activeSection, children }: DashboardSh
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white">
-      <Navbar />
 
       <main id="dashboard-export-area" className="container mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
         <header className="space-y-4">

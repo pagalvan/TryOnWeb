@@ -2,13 +2,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Package, Eye, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/navbar"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <Navbar />
 
       <section className="relative">
         {/* Hero Video */}

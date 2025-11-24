@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Space_Grotesk } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
+import { Navbar } from "@/components/navbar"
 import "./globals.css"
 
 const inter = Inter({
@@ -15,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: "TryOnWeb - Sistema de Gestión de Inventario con Probador Virtual",
+  title: "TryOn",
   description: "Plataforma moderna de gestión de inventario con tecnología de probador virtual basada en Lens Studio",
   icons: {
     icon: "/logo.png",
@@ -32,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <Navbar />
         {children}
         <Toaster />
       </body>
