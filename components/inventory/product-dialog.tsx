@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo, type ChangeEvent } from "react"
-import { Plus, Wand2, X } from "lucide-react"
+import { useState, useMemo, useRef, type ChangeEvent } from "react"
+import { Plus, Wand2, X, Upload, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -40,9 +40,43 @@ export function ProductDialog({
 }: ProductDialogProps) {
   const [colorCode, setColorCode] = useState("#000000")
   const [tallaInput, setTallaInput] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleChange = (field: keyof ProductFormState, value: string | boolean) => {
     onFormChange({ ...productForm, [field]: value })
+  }
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al subir la imagen")
+      }
+
+      const data = await response.json()
+      handleChange("imageUrl", data.url)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Error al subir la imagen')
+    } finally {
+      setUploading(false)
+      // Reset input so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
   }
 
   const handleInputChange =
@@ -287,7 +321,27 @@ export function ProductDialog({
           <div className="grid md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Imagen (URL)</Label>
-              <Input placeholder="https://..." value={productForm.imageUrl} onChange={handleInputChange("imageUrl")} />
+              <div className="flex gap-2">
+                <Input placeholder="https://..." value={productForm.imageUrl} onChange={handleInputChange("imageUrl")} />
+                <Input
+                  type="file"
+                  className="hidden"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  title="Subir imagen"
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
 
             <div className="grid gap-2">
