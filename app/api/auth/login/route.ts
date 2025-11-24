@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         role,
         nombre: profile?.display_name ?? (data.user.user_metadata as any)?.nombre ?? "",
         telefono: profile?.phone ?? (data.user.user_metadata as any)?.telefono ?? "",
+        token, // Return token for client-side session management
       },
     })
 

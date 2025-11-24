@@ -62,7 +62,7 @@ export function DashboardVisuals({
       <section className="grid gap-6 xl:grid-cols-12">
         <Card
           className={`${panelClass} xl:col-span-8`}
-          style={{ background: "linear-gradient(160deg, #eff0ff 0%, #dfe1ff 100%)" }}
+          style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
         >
           <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
             <div>
@@ -119,7 +119,7 @@ export function DashboardVisuals({
           </CardContent>
         </Card>
 
-        <Card className={`${panelClass} xl:col-span-4`} style={{ background: "linear-gradient(145deg, #fdf2ff 0%, #f5d9ff 100%)" }}>
+        <Card className={`${panelClass} xl:col-span-4`} style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}>
           <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-none p-6 pb-3">
             <div>
               <CardTitle className="text-lg font-semibold text-slate-900">Usuarios activos</CardTitle>

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import { Banknote, Boxes, Eye } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import type { DashboardExportData } from "@/components/dashboard/dashboard-export-sheet"
 import type { DashboardFiltersInput, DemandTrendPoint, InventoryFlowPoint, ProductTrafficItem, TryOnTrendPoint } from "@/lib/types/analytics"
@@ -246,7 +247,13 @@ export const loadDashboardContext = async (
   const [overview, reportsOverview] = await Promise.all([
     fetchDashboardOverview(filters),
     fetchReportsOverview(),
-  ])
+  ]).catch((error) => {
+    const message = error instanceof Error ? error.message : ""
+    if (message === "No autorizado" || message === "Permisos insuficientes") {
+      redirect("/")
+    }
+    throw error
+  })
 
   const panelClass = "rounded-3xl border border-slate-100/70 bg-white/80 shadow-[0_25px_60px_-12px_rgba(15,23,42,0.18)] backdrop-blur-sm"
   const hasInventoryFlow = overview.inventoryFlow.length > 0

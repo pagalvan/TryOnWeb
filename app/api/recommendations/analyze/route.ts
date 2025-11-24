@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     console.log("API Key found (length):", apiKey.length);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const { imageUrl, measurements } = await req.json();
+    const { imageUrl, measurements, currentProduct } = await req.json();
 
     console.log("Analyzing request. Image:", imageUrl ? "Yes" : "No", "Measurements:", measurements ? "Yes" : "No");
 
@@ -46,6 +46,14 @@ export async function POST(req: NextRequest) {
     // 1. Fetch Available Inventory & User Favorites
     const supabase = getSupabaseAdminClient()
     const user = await getAuthenticatedUser()
+
+    // Fetch all available colors for strict colorimetry
+    const { data: colorData } = await supabase
+      .from('prendas')
+      .select('color')
+      .not('color', 'is', null);
+    
+    const availableColors = Array.from(new Set(colorData?.map((c: any) => c.color).filter(Boolean) || [])).join(', ');
 
     // Fetch favorites if user is logged in
     let favoriteCategories: string[] = [];
@@ -103,6 +111,28 @@ export async function POST(req: NextRequest) {
       You are a professional fashion stylist and image consultant AI.
     `;
 
+    if (currentProduct) {
+      prompt += `
+      CONTEXT:
+      The user is currently trying on a product named "${currentProduct.name}" which belongs to the category "${currentProduct.category}".
+      
+      RULES FOR STYLE RECOMMENDATION:
+      1. You must recommend EXACTLY ONE (1) item to complete the look.
+      2. DO NOT recommend items from the category "${currentProduct.category}". Look for complementary items (e.g. if wearing a T-shirt, recommend Pants or a Skirt).
+      `;
+    } else {
+       prompt += `
+       RULES FOR STYLE RECOMMENDATION:
+       1. You must recommend EXACTLY ONE (1) item that best matches the user's style.
+       `;
+    }
+
+    prompt += `
+      RULES FOR COLORIMETRY:
+      1. Analyze the user's seasonal color palette.
+      2. When suggesting "bestColors", you MUST choose ONLY from the following list of available colors in our inventory: ${availableColors}.
+    `;
+
     if (measurements) {
       prompt += `
       The user has provided the following body measurements:
@@ -129,13 +159,13 @@ export async function POST(req: NextRequest) {
       prompt += `
       Analyze this image of a person trying on clothes (virtual try-on).
       Provide a comprehensive analysis including:
-      1. Colorimetry Analysis: Determine the user's seasonal color palette (e.g., Winter, Summer, Autumn, Spring) based on skin tone, hair, and eyes. Suggest the best colors for them.
+      1. Colorimetry Analysis: Determine the user's seasonal color palette (e.g., Winter, Summer, Autumn, Spring) based on skin tone, hair, and eyes. Suggest the best colors for them FROM THE AVAILABLE LIST provided above.
       `;
     }
 
     prompt += `
       2. Size & Fit Recommendation: Estimate the user's body type and suggest the best fit (e.g., Slim, Regular, Oversized) and general sizing advice. Also provide an estimated size range (e.g., "S-M", "L-XL", "38-40").
-      3. Style Recommendations: Select 3 matching items from the provided "Available Inventory" list below that would complete the look.
+      3. Style Recommendations: Select 1 matching item from the provided "Available Inventory" list below that would complete the look.
       
       AVAILABLE INVENTORY (JSON):
       ${JSON.stringify(productContext)}
@@ -149,7 +179,7 @@ export async function POST(req: NextRequest) {
       {
         "colorimetry": {
           "season": "Season Name (in Spanish) (or 'N/A' if no image)",
-          "bestColors": ["Color 1", "Color 2", "Color 3"],
+          "bestColor": { "name": "Color Name", "hex": "#RRGGBB" },
           "description": "Brief explanation of why these colors work (in Spanish) (or 'N/A' if no image)"
         },
         "sizeRecommendation": {

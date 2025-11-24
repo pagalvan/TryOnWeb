@@ -28,13 +28,16 @@ export function DashboardShell({ context, activeSection, children }: DashboardSh
     <div className="min-h-screen overflow-x-hidden bg-white">
       <Navbar />
 
-      <main id="dashboard-export-area" className="container mx-auto max-w-[1180px] space-y-8 px-4 py-10 sm:px-6">
+      <main id="dashboard-export-area" className="container mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
         <header className="space-y-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">Panel ejecutivo</p>
-              <h1 className="text-[34px] font-semibold leading-tight text-slate-900 md:text-[38px]">Operaciones de inventario</h1>
-              <p className="text-sm text-slate-500">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-1 w-8 bg-primary rounded-full" />
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Panel ejecutivo</p>
+              </div>
+              <h1 className="mb-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Operaciones de inventario</h1>
+              <p className="text-lg text-muted-foreground">
                 Observa la salud del inventario, el desempeño del probador virtual y las alertas clave en un solo lugar.
               </p>
             </div>

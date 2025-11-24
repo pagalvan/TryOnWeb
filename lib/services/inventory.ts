@@ -64,6 +64,8 @@ export type InventoryProduct = {
   estado: string
   destacado: boolean
   categoria_id: string | null
+  tallas?: string[] | null
+  colores?: string[] | null
   metadata: InventoryProductMetadata | null
   categorias?: InventoryCategory | null
   inventario_items: InventoryItem[]
@@ -78,6 +80,8 @@ export type CreateProductPayload = {
   descripcion?: string | null
   estado: string
   destacado: boolean
+  tallas?: string[] | null
+  colores?: string[] | null
   metadata?: InventoryProductMetadata | null
   stockInicial?: number
   stockLocationId?: string | null

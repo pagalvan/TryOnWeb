@@ -36,7 +36,7 @@ export function InventoryFeedbackCard({ panelClass, data, total }: InventoryFeed
   return (
     <Card
       className={`${panelClass} xl:col-span-12`}
-      style={{ background: "linear-gradient(135deg, #ffe0f1 0%, #ffd1ea 100%)" }}
+      style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
     >
       <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
         <div>

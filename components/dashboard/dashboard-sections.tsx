@@ -32,7 +32,14 @@ export function ResumenSection({ context }: SectionProps) {
             className={`${panelClass} overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-b from-white/95 via-white/90 to-slate-50/80 p-6 shadow-[0_12px_25px_rgba(15,23,42,0.08)] backdrop-blur-xl`}
           >
             <div className="flex items-start justify-between gap-4">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.accent} text-white shadow-inner`}> 
+              <div 
+                className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-inner backdrop-blur-sm"
+                style={{
+                  background: "linear-gradient(135deg, rgba(32, 163, 169, 0.65), rgba(13, 110, 123, 0.35))",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  boxShadow: "0 10px 25px rgba(13, 110, 123, 0.15)",
+                }}
+              > 
                 <Icon className="h-5 w-5" />
               </div>
               <span
@@ -95,7 +102,7 @@ export function InventarioSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-7`}
-        style={{ background: "linear-gradient(135deg, #f3e8ff 0%, #e0cdfc 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-2 border-b border-slate-100/80 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -125,7 +132,7 @@ export function InventarioSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-5`}
-        style={{ background: "linear-gradient(135deg, #fef9c3 0%, #fde68a 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Estado del inventario</CardTitle>
@@ -183,7 +190,7 @@ export function DemandaSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-12`}
-        style={{ background: "linear-gradient(135deg, #ffe0f2 0%, #ffcfe7 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -219,7 +226,7 @@ export function CatalogoSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-12`}
-        style={{ background: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Tráfico del catálogo</CardTitle>
@@ -248,7 +255,7 @@ export function CatalogoSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-7`}
-        style={{ background: "linear-gradient(135deg, #fff4d7 0%, #ffe3a3 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -297,7 +304,7 @@ export function CatalogoSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-5`}
-        style={{ background: "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Categorías activas</CardTitle>
@@ -336,7 +343,7 @@ export function ProbadorSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-7 p-6`}
-        style={{ background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-3 border-b border-slate-100/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -363,7 +370,7 @@ export function ProbadorSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-5`}
-        style={{ background: "linear-gradient(135deg, #dbeafe 0%, #c7d2fe 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
           <div>
@@ -391,7 +398,7 @@ export function AlertasSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-8`}
-        style={{ background: "linear-gradient(135deg, #f3e8ff 0%, #e0cdfc 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -450,7 +457,7 @@ export function AlertasSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-4`}
-        style={{ background: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Resumen de alertas</CardTitle>
@@ -500,7 +507,7 @@ export function OperacionesSection({ context }: SectionProps) {
     <section className="grid gap-6 xl:grid-cols-12">
       <Card
         className={`${panelClass} xl:col-span-7`}
-        style={{ background: "linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -555,7 +562,7 @@ export function OperacionesSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-5`}
-        style={{ background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="flex flex-col gap-3 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -591,7 +598,7 @@ export function OperacionesSection({ context }: SectionProps) {
 
       <Card
         className={`${panelClass} xl:col-span-8 xl:col-start-3`}
-        style={{ background: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)" }}
+        style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
       >
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Movimientos recientes</CardTitle>

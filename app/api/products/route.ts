@@ -7,7 +7,7 @@ import { resolveInventoryLocation } from "./location-helpers"
 import { syncLensAsset } from "./lens-helpers"
 
 const PRODUCT_SELECT = `
-  id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
+  id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata, talla, color,
   categorias:categoria_id ( id, nombre ),
   inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado, bodega_id ),
   lens_assets ( id, prenda_id, tipo, url, provider, version, metadata, activo, created_at, updated_at )
@@ -18,6 +18,8 @@ const mapProduct = (producto: any) => ({
   categorias: Array.isArray(producto.categorias) ? producto.categorias[0] ?? null : producto.categorias ?? null,
   inventario_items: producto.inventario_items ?? [],
   lens_assets: Array.isArray(producto.lens_assets) ? producto.lens_assets : [],
+  tallas: producto.talla ? producto.talla.split(",").map((t: string) => t.trim()) : [],
+  colores: producto.color ? producto.color.split(",").map((c: string) => c.trim()) : [],
 })
 
 export const runtime = "nodejs"
@@ -115,6 +117,8 @@ export async function POST(request: NextRequest) {
     estado,
     destacado,
     metadata,
+    tallas,
+    colores,
     stockInicial,
     stockLocationId,
     ubicacion,
@@ -131,6 +135,8 @@ export async function POST(request: NextRequest) {
     estado,
     destacado,
     metadata: metadata && Object.keys(metadata).length > 0 ? metadata : null,
+    talla: tallas && tallas.length > 0 ? tallas.join(", ") : null,
+    color: colores && colores.length > 0 ? colores.join(", ") : null,
   }
 
   const { data, error } = await supabase.from("prendas").insert(insertPayload).select().single()

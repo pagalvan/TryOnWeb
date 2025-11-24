@@ -58,13 +58,28 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await apiFetch<{ data: { role: string } }>("/api/auth/login", {
+      const response = await apiFetch<{ data: { role: string; token: string; nombre: string; email: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       })
 
       const role = response.data?.role ?? "cliente"
       localStorage.setItem("userRole", role)
+
+      // Save account for fast switching
+      if (response.data?.token) {
+        const savedAccounts = JSON.parse(localStorage.getItem("savedAccounts") || "[]")
+        const newAccount = {
+          name: response.data.nombre || email.split("@")[0],
+          email: response.data.email,
+          role: role,
+          token: response.data.token
+        }
+        
+        // Remove existing entry for this email if exists
+        const filtered = savedAccounts.filter((a: any) => a.email !== newAccount.email)
+        localStorage.setItem("savedAccounts", JSON.stringify([...filtered, newAccount]))
+      }
 
       const next = searchParams.get("next")
       if (next) {

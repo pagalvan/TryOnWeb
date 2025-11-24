@@ -25,13 +25,9 @@ export const productPayloadSchema = z.object({
   descripcion: z.string().optional().or(z.literal("")),
   estado: z.enum(["disponible", "reservada", "inactiva"]),
   destacado: z.boolean().default(false),
-  metadata: z
-    .object({
-      image_url: z.string().url("URL de imagen inválida").optional(),
-      gallery: z.array(z.string().url()).optional(),
-    })
-    .partial()
-    .optional(),
+  tallas: z.array(z.string()).optional().nullable(),
+  colores: z.array(z.string()).optional().nullable(),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
   stockInicial: z.number().int().min(0).default(0),
   stockLocationId: z.string().uuid().optional().or(z.literal("")).nullable(),
   ubicacion: z.string().min(2).optional().or(z.literal("")).nullable(),

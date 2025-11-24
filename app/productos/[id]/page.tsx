@@ -26,21 +26,17 @@ import { supabase } from "@/lib/supabase/client"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  formatCurrency,
+  getLensId,
+  getPrimaryLensAsset,
+  type LensAsset,
+} from "@/components/virtual-try-on/types"
 
 type InventarioItem = {
   id: string
   ubicacion: string
   cantidad: number
-}
-
-type LensAsset = {
-  id: string
-  tipo: string
-  url: string
-  provider: string | null
-  version: string | null
-  metadata: Record<string, unknown> | null
-  activo: boolean
 }
 
 type ProductoDetalle = {
@@ -55,6 +51,8 @@ type ProductoDetalle = {
   estado: string
   inventario_items: InventarioItem[]
   lens_assets?: LensAsset[] | null
+  colores?: string[]
+  tallas?: string[] | string
 }
 
 export default function ProductoDetallePage() {
@@ -62,6 +60,8 @@ export default function ProductoDetallePage() {
   const router = useRouter()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [producto, setProducto] = useState<ProductoDetalle | null>(null)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFavorited, setIsFavorited] = useState(false)
@@ -187,6 +187,8 @@ export default function ProductoDetallePage() {
     setShareLoading(false)
     setArActive(false)
     setCameraFacing("user")
+    setSelectedColor(null)
+    setSelectedSize(null)
   }, [productoId])
 
   useEffect(() => {
@@ -298,7 +300,7 @@ export default function ProductoDetallePage() {
     return producto.inventario_items.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
   }, [producto])
 
-  const lensId = useMemo(() => getProductLensId(producto), [producto])
+  const lensId = useMemo(() => getLensId(producto), [producto])
   const lensAsset = useMemo(() => getPrimaryLensAsset(producto), [producto])
   const hasLens = lensId.length > 0
 
@@ -539,6 +541,15 @@ export default function ProductoDetallePage() {
     }
   }, [])
 
+  function Detalle({ label, value }: { label: string; value: string }) {
+    return (
+      <div className="flex justify-between py-2 border-b border-border last:border-b-0">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium text-foreground text-right">{value}</span>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -625,9 +636,6 @@ export default function ProductoDetallePage() {
               </div>
               <h1 className="font-display text-4xl font-bold text-foreground mb-4">{producto.nombre}</h1>
               <p className="text-3xl font-bold text-foreground mb-6">{formatCurrency(producto.valor_unitario)}</p>
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                {producto.descripcion ?? "Aún no hay descripción para este producto."}
-              </p>
             </div>
 
             <div className="flex flex-wrap gap-3 mb-8">
@@ -668,7 +676,7 @@ export default function ProductoDetallePage() {
                 </Button>
               )}
 
-              {userRole === "cliente" && (
+              {userRole && (
                 <Button
                   type="button"
                   variant="outline"
@@ -718,45 +726,79 @@ export default function ProductoDetallePage() {
                 </Button>
               )}
             </div>
-            {!hasLens ? (
-              <p className="-mt-4 mb-6 text-sm text-muted-foreground">
-                Añade un Lens ID desde el inventario para habilitar la prueba en realidad aumentada.
-              </p>
-            ) : null}
-
-            {userRole === "admin" && (
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm text-muted-foreground">Stock Disponible</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-foreground">{stockTotal} unidades</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm text-muted-foreground">SKU</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-foreground">{producto.sku ?? "No registrado"}</p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
 
             <Card>
               <CardHeader>
-                <CardTitle>Detalles</CardTitle>
+                <CardTitle>Información</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Detalle label="Estado" value={producto.estado} />
-                  <Detalle label="Experiencia AR" value={hasLens ? "Disponible" : "No disponible"} />
-                  <Detalle label="Categoría" value={producto.categorias?.nombre ?? "Sin categoría"} />
-                  <Detalle label="SKU" value={producto.sku ?? "Sin SKU"} />
-                  <Detalle label="Ubicaciones" value={producto.inventario_items.map((i) => i.ubicacion).join(", ") || "Sin registros"} />
+                  <div className="py-2 border-b border-border last:border-b-0">
+                    <p className="text-foreground leading-relaxed whitespace-pre-line">
+                      {producto.descripcion ?? "Aún no hay descripción para este producto."}
+                    </p>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border last:border-b-0 items-center">
+                    <span className="text-muted-foreground">Colores disponibles</span>
+                    <div className="flex gap-1.5 justify-end">
+                       {producto.colores && producto.colores.length > 0 ? (
+                          producto.colores.map((c, i) => {
+                            const parts = c.split(":")
+                            const code = parts.length > 1 ? parts[1] : parts[0]
+                            const isSelected = selectedColor === code
+                            return (
+                              <button 
+                                key={i} 
+                                className={cn(
+                                  "h-6 w-6 rounded-full border shadow-sm transition-all",
+                                  isSelected ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-border hover:scale-110"
+                                )}
+                                style={{ backgroundColor: code }} 
+                                title={code}
+                                onClick={() => setSelectedColor(code)}
+                              />
+                            )
+                          })
+                       ) : (
+                         <span className="font-medium text-foreground">No especificado</span>
+                       )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border last:border-b-0 items-center">
+                    <span className="text-muted-foreground">Tallas disponibles</span>
+                    <div className="flex gap-1.5 justify-end flex-wrap max-w-[60%]">
+                       {(() => {
+                         const tallasRaw = producto.tallas
+                         const tallas = Array.isArray(tallasRaw) 
+                           ? tallasRaw 
+                           : typeof tallasRaw === 'string' 
+                             ? tallasRaw.split(',').map(t => t.trim()).filter(Boolean)
+                             : []
+                         
+                         if (tallas.length > 0) {
+                           return tallas.map((t, i) => {
+                             const isSelected = selectedSize === t
+                             return (
+                               <button 
+                                 key={i} 
+                                 className={cn(
+                                   "min-w-[2rem] h-8 px-2 rounded-md border text-sm font-medium transition-all",
+                                   isSelected 
+                                     ? "bg-primary text-primary-foreground border-primary" 
+                                     : "bg-background text-foreground border-border hover:border-primary/50"
+                                 )}
+                                 onClick={() => setSelectedSize(t)}
+                               >
+                                 {t}
+                               </button>
+                             )
+                           })
+                         }
+                         return <span className="font-medium text-foreground">No especificado</span>
+                       })()}
+                    </div>
+                  </div>
+                  <Detalle label="Ubicación de prendas" value={producto.inventario_items.map((i) => i.ubicacion).join(", ") || "Sin registros"} />
                 </div>
               </CardContent>
             </Card>
@@ -788,16 +830,30 @@ export default function ProductoDetallePage() {
                   <span className="font-medium text-sm">{recommendations.colorimetry.season}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">{recommendations.colorimetry.description}</p>
-                <div className="flex flex-wrap gap-2">
-                  {recommendations.colorimetry.bestColors?.map((color: string, i: number) => (
-                    <Badge 
-                      key={i} 
-                      variant="secondary" 
-                      className="text-xs bg-background/80"
-                    >
-                      {color}
-                    </Badge>
-                  ))}
+                <div className="flex items-center gap-3 mt-2">
+                  {recommendations.colorimetry.bestColor ? (
+                    <>
+                      <div 
+                        className="w-8 h-8 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
+                        style={{ backgroundColor: recommendations.colorimetry.bestColor.hex }}
+                      />
+                      <span className="font-medium text-sm">
+                        {recommendations.colorimetry.bestColor.name}
+                      </span>
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {recommendations.colorimetry.bestColors?.map((color: string, i: number) => (
+                        <Badge 
+                          key={i} 
+                          variant="secondary" 
+                          className="text-xs bg-background/80"
+                        >
+                          {color}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -955,97 +1011,3 @@ export default function ProductoDetallePage() {
   )
 }
 
-function formatCurrency(value: number | null) {
-  if (value === null || value === undefined) return "—"
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value)
-}
-
-function Detalle({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between py-2 border-b border-border last:border-b-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground text-right">{value}</span>
-    </div>
-  )
-}
-
-function getProductLensId(producto?: ProductoDetalle | null): string {
-  const asset = getPrimaryLensAsset(producto)
-  if (asset) {
-    const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata : null
-    if (metadata) {
-      const candidates = [metadata.lens_id, metadata.lensId, metadata.id]
-      for (const candidate of candidates) {
-        if (typeof candidate === "string" && candidate.trim().length > 0) {
-          return candidate.trim()
-        }
-      }
-    }
-
-    const fromUrl = extractLensIdFromUrl(asset.url)
-    if (fromUrl) {
-      return fromUrl
-    }
-  }
-
-  const fallback = typeof producto?.metadata?.lensId === "string" ? producto.metadata.lensId.trim() : ""
-  return fallback
-}
-
-function getPrimaryLensAsset(producto?: ProductoDetalle | null): LensAsset | null {
-  if (!producto) return null
-  const assets = Array.isArray(producto.lens_assets) ? producto.lens_assets : []
-  if (!assets.length) return null
-
-  const active = assets.filter((asset) => asset && asset.activo !== false)
-  if (!active.length) return null
-
-  const snapLens = active.find(
-    (asset) => (asset.provider ?? "").toLowerCase() === "snap" && (asset.tipo ?? "").toLowerCase() === "lens"
-  )
-  if (snapLens) {
-    return snapLens
-  }
-
-  const anyLens = active.find((asset) => (asset.tipo ?? "").toLowerCase() === "lens")
-  if (anyLens) {
-    return anyLens
-  }
-
-  return active[0] ?? null
-}
-
-function extractLensIdFromUrl(value?: string | null): string {
-  if (!value) return ""
-  const trimmed = value.trim()
-  if (!trimmed) return ""
-
-  const uuidPattern = /^[0-9a-fA-F-]{32,}$/
-  if (uuidPattern.test(trimmed)) {
-    return trimmed
-  }
-
-  try {
-    const parsed = new URL(trimmed)
-    const paramCandidates = ["lensId", "lens_id", "id"]
-    for (const key of paramCandidates) {
-      const candidate = parsed.searchParams.get(key)
-      if (candidate) {
-        const normalized = candidate.trim()
-        if (normalized && uuidPattern.test(normalized)) {
-          return normalized
-        }
-      }
-    }
-
-    const segments = parsed.pathname.split("/").filter(Boolean)
-    const lastSegment = segments[segments.length - 1]
-    if (lastSegment && uuidPattern.test(lastSegment)) {
-      return lastSegment
-    }
-  } catch {
-    // ignore
-  }
-
-  return ""
-}
