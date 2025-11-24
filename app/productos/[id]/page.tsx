@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler } from "lucide-react"
+import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -406,6 +406,40 @@ export default function ProductoDetallePage() {
     }
   }
 
+  const handleCapture = async () => {
+    if (!playerRef.current) return
+
+    try {
+      const blob = await playerRef.current.captureSnapshot()
+      if (!blob) throw new Error("Failed to capture snapshot")
+
+      const reader = new FileReader()
+      reader.readAsDataURL(blob)
+      reader.onloadend = async () => {
+        const base64data = reader.result as string
+        
+        const response = await fetch('/api/tryon-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prenda_id: producto.id,
+            image_url: base64data,
+            tryon_type: 'lens',
+            metadata: { productName: producto.nombre }
+          })
+        })
+
+        if (response.ok) {
+          toast({ title: "Guardado", description: "Prueba guardada en tu historial." })
+        } else {
+          throw new Error("Failed to save")
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error", description: "No se pudo guardar la prueba.", variant: "destructive" })
+    }
+  }
 
   useEffect(() => {
     const fetchMeasurements = async () => {
@@ -656,6 +690,18 @@ export default function ProductoDetallePage() {
                 >
                   <Eye className="mr-2 h-5 w-5" />
                   AR no disponible
+                </Button>
+              )}
+
+              {arActive && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCapture}
+                  className="flex-1 min-w-[200px]"
+                >
+                  <Save className="mr-2 h-5 w-5" />
+                  Guardar Foto
                 </Button>
               )}
 

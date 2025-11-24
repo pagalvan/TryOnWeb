@@ -31,6 +31,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { AccountSelectionDialog } from "@/components/auth/account-selection-dialog"
+import { TryOnHistorySheet } from "@/components/tryon-history/history-sheet"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -307,6 +308,7 @@ export function Navbar() {
 
             {userRole && (
               <div className="hidden md:flex items-center gap-3">
+                <TryOnHistorySheet />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">

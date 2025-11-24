@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import Image from "next/image"
-import { Loader2, Upload, Wand2, X } from "lucide-react"
+import { Loader2, Upload, Wand2, X, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -166,6 +166,30 @@ export function GeminiTryOnDialog({ productImage, productName }: GeminiTryOnDial
     }
   }
 
+  const handleSave = async () => {
+    if (!result) return
+    
+    try {
+      const response = await fetch('/api/tryon-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: result,
+          tryon_type: 'ai',
+          metadata: { productName }
+        })
+      })
+      
+      if (response.ok) {
+        toast({ title: "Guardado", description: "Prueba guardada en tu historial." })
+      } else {
+        throw new Error("Failed to save")
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo guardar la prueba.", variant: "destructive" })
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -258,7 +282,13 @@ export function GeminiTryOnDialog({ productImage, productName }: GeminiTryOnDial
           {/* Result Display */}
           {result && (
             <div className="space-y-2 border-t pt-4 mt-2">
-              <Label className="text-lg font-semibold">Resultado</Label>
+              <div className="flex justify-between items-center">
+                <Label className="text-lg font-semibold">Resultado</Label>
+                <Button variant="outline" size="sm" onClick={handleSave}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Guardar
+                </Button>
+              </div>
               <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
                 {/* Since Gemini 1.5 Flash returns text, we display text. 
                     If it returned an image URL, we would display an Image component. 
