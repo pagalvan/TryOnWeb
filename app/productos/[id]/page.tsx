@@ -31,6 +31,7 @@ import {
   getPrimaryLensAsset,
   type LensAsset,
 } from "@/components/virtual-try-on/types"
+import { GeminiTryOnDialog } from "@/components/virtual-try-on/gemini-try-on-dialog"
 
 type InventarioItem = {
   id: string
@@ -685,6 +686,11 @@ export default function ProductoDetallePage() {
                   Mis Medidas
                 </Button>
               )}
+
+              <GeminiTryOnDialog 
+                productImage={producto.metadata?.image_url || "/placeholder.svg"} 
+                productName={producto.nombre} 
+              />
 
               <Button
                 type="button"
