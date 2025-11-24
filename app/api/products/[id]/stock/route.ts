@@ -58,14 +58,49 @@ export async function PUT(request: NextRequest, { params }: { params: StockParam
   }
 
   if (itemId) {
+    // 1. Fetch previous quantity to calculate difference
+    const { data: oldItem } = await supabase
+      .from("inventario_items")
+      .select("cantidad")
+      .eq("id", itemId)
+      .single()
+
+    const oldQuantity = oldItem?.cantidad ?? 0
+    const diff = cantidad - oldQuantity
+
     const { error } = await supabase.from("inventario_items").update(record).eq("id", itemId)
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 400 })
     }
+
+    // 2. Record movement if quantity changed
+    if (diff !== 0) {
+      await supabase.from("inventario_movimientos").insert({
+        inventario_id: itemId,
+        tipo: diff > 0 ? "entrada" : "salida",
+        cantidad: Math.abs(diff),
+        motivo: "Actualización manual de stock",
+      })
+    }
   } else {
-    const { error } = await supabase.from("inventario_items").insert(record)
+    const { data: newItem, error } = await supabase
+      .from("inventario_items")
+      .insert(record)
+      .select("id")
+      .single()
+
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 400 })
+    }
+
+    // 3. Record initial movement
+    if (cantidad > 0) {
+      await supabase.from("inventario_movimientos").insert({
+        inventario_id: newItem.id,
+        tipo: "entrada",
+        cantidad: cantidad,
+        motivo: "Stock inicial",
+      })
     }
   }
 

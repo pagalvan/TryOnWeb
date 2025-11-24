@@ -113,7 +113,7 @@ type TryOnItemRecord = {
 
 type TryOnSessionRecord = {
   id: string
-  created_at: string | null
+  started_at: string | null
 }
 
 type ProductSummaryRecord = {
@@ -304,7 +304,7 @@ const computeTryOnTrend = (
   const itemMap = new Map<string, number>()
 
   for (const session of sessions) {
-    const key = formatDateKey(session.created_at)
+    const key = formatDateKey(session.started_at)
     if (!key) continue
     sessionMap.set(key, (sessionMap.get(key) ?? 0) + 1)
   }
@@ -521,8 +521,8 @@ const fetchRawAnalyticsData = async (): Promise<RawAnalyticsData> => {
       supabase.from("categorias").select("id, nombre, estado, prendas:prendas ( id )"),
       supabase
         .from("tryon_sessions")
-        .select("id, created_at")
-        .order("created_at", { ascending: false })
+        .select("id, started_at")
+        .order("started_at", { ascending: false })
         .limit(500),
       supabase
         .from("tryon_items")
@@ -636,7 +636,7 @@ export const getDashboardOverview = async (filters?: DashboardFiltersInput): Pro
     return categoryId === normalizedFilters.categoryId
   })
 
-  const filteredTryOnSessions = raw.tryOnSessions.filter((session) => isWithinRange(session.created_at, fromDate, toDate))
+  const filteredTryOnSessions = raw.tryOnSessions.filter((session) => isWithinRange(session.started_at, fromDate, toDate))
 
   const totalInventoryValue = filteredInventory.reduce((acc, item) => {
     const quantity = item.cantidad ?? 0

@@ -2,19 +2,22 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Lock } from "lucide-react"
 import Image from "next/image"
 import { apiFetch } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -22,6 +25,26 @@ export default function LoginPage() {
   const [showResetPrompt, setShowResetPrompt] = useState(false)
   const [resetMessage, setResetMessage] = useState("")
   const [resetLoading, setResetLoading] = useState(false)
+
+  useEffect(() => {
+    const reason = searchParams.get("reason")
+    if (reason === "tryon") {
+      // Use setTimeout to ensure the toast renders after hydration/mount
+      setTimeout(() => {
+        toast({
+          title: (
+            <div className="flex items-center gap-2 text-amber-600">
+              <Lock className="h-5 w-5" />
+              <span>Acceso requerido</span>
+            </div>
+          ) as any,
+          description: "Registrate o inicia sesion para acceder a nuestro probador virtual",
+          duration: 5000,
+          className: "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800",
+        })
+      }, 100)
+    }
+  }, [searchParams, toast])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,14 +58,35 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await apiFetch<{ data: { role: string } }>("/api/auth/login", {
+      const response = await apiFetch<{ data: { role: string; token: string; nombre: string; email: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       })
 
       const role = response.data?.role ?? "cliente"
       localStorage.setItem("userRole", role)
-      router.push(role === "admin" ? "/dashboard" : "/")
+
+      // Save account for fast switching
+      if (response.data?.token) {
+        const savedAccounts = JSON.parse(localStorage.getItem("savedAccounts") || "[]")
+        const newAccount = {
+          name: response.data.nombre || email.split("@")[0],
+          email: response.data.email,
+          role: role,
+          token: response.data.token
+        }
+        
+        // Remove existing entry for this email if exists
+        const filtered = savedAccounts.filter((a: any) => a.email !== newAccount.email)
+        localStorage.setItem("savedAccounts", JSON.stringify([...filtered, newAccount]))
+      }
+
+      const next = searchParams.get("next")
+      if (next) {
+        router.push(next)
+      } else {
+        router.push(role === "admin" ? "/dashboard" : "/")
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "No pudimos iniciar sesión"
       setError(message)

@@ -1,16 +1,12 @@
 -- =============================================================
--- TryOnWeb - Base de datos para Supabase (PostgreSQL)
--- Enfoque: Gestión de inventario + probador virtual + recomendaciones
--- Nota: Este script está pensado para ejecutarse en Supabase.
+-- TryOnWeb - Esquema de Base de Datos Unificado
+-- Contiene: Tablas, Índices, Triggers y Funciones
 -- =============================================================
 
--- Extensiones necesarias ----------------------------------------------------
-CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid()
+-- Extensiones necesarias
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- ===========================================================================
--- Tabla: profiles (metadatos de usuarios enlazados a Supabase Auth)
--- Cada registro corresponde a auth.users.id
--- ===========================================================================
+-- 1. Perfiles de Usuario
 CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     display_name text,
@@ -23,10 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: categorias
--- Agrupa las prendas por tipo, colección u otro criterio.
--- ===========================================================================
+-- 2. Categorías
 CREATE TABLE IF NOT EXISTS public.categorias (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre text UNIQUE NOT NULL,
@@ -37,10 +30,7 @@ CREATE TABLE IF NOT EXISTS public.categorias (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: prendas (catálogo administrado)
--- No representa ventas; "valor_unitario" sirve para valoración de inventario.
--- ===========================================================================
+-- 3. Prendas (Catálogo)
 CREATE TABLE IF NOT EXISTS public.prendas (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     categoria_id uuid REFERENCES public.categorias(id) ON DELETE SET NULL,
@@ -49,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.prendas (
     descripcion text,
     talla text,
     color text,
-    fit text, -- regular, slim, oversized, etc.
+    fit text,
     sku text UNIQUE,
     estado text NOT NULL DEFAULT 'disponible' CHECK (estado IN ('disponible','reservada','inactiva')),
     valor_unitario numeric(12,2) CHECK (valor_unitario >= 0),
@@ -59,16 +49,13 @@ CREATE TABLE IF NOT EXISTS public.prendas (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: lens_assets (aplicación de lenses / activos AR por prenda)
--- Permite conectar con Snap Lens / modelos glb / imágenes de referencia.
--- ===========================================================================
+-- 4. Activos AR (Lens Assets)
 CREATE TABLE IF NOT EXISTS public.lens_assets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     prenda_id uuid NOT NULL REFERENCES public.prendas(id) ON DELETE CASCADE,
     tipo text NOT NULL CHECK (tipo IN ('glb','lens','image','video','anchor')),
     url text NOT NULL,
-    provider text, -- snap, custom, unity, etc.
+    provider text,
     version text,
     metadata jsonb,
     activo boolean NOT NULL DEFAULT true,
@@ -76,40 +63,47 @@ CREATE TABLE IF NOT EXISTS public.lens_assets (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: inventario_items (stock por prenda y ubicación)
--- ===========================================================================
+-- 5. Bodegas de Inventario
+CREATE TABLE IF NOT EXISTS public.inventario_bodegas (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre text UNIQUE NOT NULL,
+    descripcion text,
+    direccion text,
+    ciudad text,
+    metadata jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 6. Items de Inventario (Stock)
 CREATE TABLE IF NOT EXISTS public.inventario_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     prenda_id uuid NOT NULL REFERENCES public.prendas(id) ON DELETE CASCADE,
-    ubicacion text NOT NULL,
+    bodega_id uuid NOT NULL REFERENCES public.inventario_bodegas(id),
+    ubicacion text, -- Se mantiene por compatibilidad, debe coincidir con bodega.nombre
     cantidad integer NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
     cantidad_minima integer NOT NULL DEFAULT 5 CHECK (cantidad_minima >= 0),
     estado text NOT NULL DEFAULT 'ok' CHECK (estado IN ('ok','bajo','sin_stock','bloqueado')),
     notas text,
     updated_at timestamptz NOT NULL DEFAULT now(),
     created_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (prenda_id, ubicacion)
+    UNIQUE (prenda_id, bodega_id)
 );
 
--- ===========================================================================
--- Tabla: inventario_movimientos (historial de ajustes y conteos)
--- ===========================================================================
+-- 7. Movimientos de Inventario
 CREATE TABLE IF NOT EXISTS public.inventario_movimientos (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     inventario_id uuid NOT NULL REFERENCES public.inventario_items(id) ON DELETE CASCADE,
     tipo text NOT NULL CHECK (tipo IN ('entrada','salida','ajuste','conteo')),
     cantidad integer NOT NULL,
     motivo text,
-    referencia text, -- opcional: número de documento o enlace externo
+    referencia text,
     realizado_por uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
     metadata jsonb,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: body_measurements (historial de medidas por usuario)
--- ===========================================================================
+-- 8. Medidas Corporales
 CREATE TABLE IF NOT EXISTS public.body_measurements (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -123,21 +117,19 @@ CREATE TABLE IF NOT EXISTS public.body_measurements (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: tryon_sessions (probador virtual)
--- ===========================================================================
+-- 9. Sesiones de Probador Virtual
 CREATE TABLE IF NOT EXISTS public.tryon_sessions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     dispositivo text,
-    plataforma text, -- ios, android, web, mirror, etc.
-    origen text, -- catálogo, recomendacion, buscador, etc.
+    plataforma text,
+    origen text,
     started_at timestamptz NOT NULL DEFAULT now(),
     ended_at timestamptz,
     metadata jsonb
 );
 
--- Items probados en cada sesión
+-- 10. Items Probados
 CREATE TABLE IF NOT EXISTS public.tryon_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id uuid NOT NULL REFERENCES public.tryon_sessions(id) ON DELETE CASCADE,
@@ -145,24 +137,22 @@ CREATE TABLE IF NOT EXISTS public.tryon_items (
     lens_asset_id uuid REFERENCES public.lens_assets(id) ON DELETE SET NULL,
     estado text CHECK (estado IN ('exito','parcial','descartado','pendiente')),
     duracion_seg integer CHECK (duracion_seg >= 0),
-    feedback jsonb, -- calificaciones, reacciones, etc.
+    feedback jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (session_id, prenda_id)
 );
 
--- ===========================================================================
--- Tabla: recommendation_runs (ejecuciones del motor de recomendaciones)
--- ===========================================================================
+-- 11. Ejecuciones de Recomendación
 CREATE TABLE IF NOT EXISTS public.recommendation_runs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    estrategia text NOT NULL, -- e.g. collaborative, content-based, manual
+    estrategia text NOT NULL,
     version text,
     parametros jsonb,
     ejecutado_por uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Recomendaciones emitidas a cada perfil
+-- 12. Recomendaciones
 CREATE TABLE IF NOT EXISTS public.recommendations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -174,6 +164,7 @@ CREATE TABLE IF NOT EXISTS public.recommendations (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- 13. Items Recomendados
 CREATE TABLE IF NOT EXISTS public.recommendation_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     recommendation_id uuid NOT NULL REFERENCES public.recommendations(id) ON DELETE CASCADE,
@@ -185,10 +176,7 @@ CREATE TABLE IF NOT EXISTS public.recommendation_items (
     UNIQUE (recommendation_id, prenda_id)
 );
 
--- ===========================================================================
--- Tabla: product_events (para reportes de uso/consultas)
--- Guarda eventos de vista, búsqueda, favorito, etc.
--- ===========================================================================
+-- 14. Eventos de Producto (Analytics)
 CREATE TABLE IF NOT EXISTS public.product_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -198,9 +186,7 @@ CREATE TABLE IF NOT EXISTS public.product_events (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Tabla: reportes (snapshots de información)
--- ===========================================================================
+-- 15. Reportes
 CREATE TABLE IF NOT EXISTS public.reportes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     creado_por uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -210,22 +196,28 @@ CREATE TABLE IF NOT EXISTS public.reportes (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ===========================================================================
--- Índices recomendados ------------------------------------------------------
+-- 16. Favoritos de Producto
+CREATE TABLE IF NOT EXISTS public.product_favorites (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    prenda_id uuid NOT NULL REFERENCES public.prendas(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (profile_id, prenda_id)
+);
+
+-- Índices
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 CREATE INDEX IF NOT EXISTS idx_prendas_categoria ON public.prendas(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_prendas_estado ON public.prendas(estado);
 CREATE INDEX IF NOT EXISTS idx_inventario_prenda ON public.inventario_items(prenda_id);
-CREATE INDEX IF NOT EXISTS idx_inventario_estado ON public.inventario_items(estado);
+CREATE INDEX IF NOT EXISTS idx_inventario_bodega ON public.inventario_items(bodega_id);
+CREATE INDEX IF NOT EXISTS idx_bodegas_nombre ON public.inventario_bodegas(LOWER(nombre));
 CREATE INDEX IF NOT EXISTS idx_tryon_sessions_profile ON public.tryon_sessions(profile_id);
-CREATE INDEX IF NOT EXISTS idx_tryon_items_prenda ON public.tryon_items(prenda_id);
 CREATE INDEX IF NOT EXISTS idx_recommendations_profile ON public.recommendations(profile_id);
 CREATE INDEX IF NOT EXISTS idx_product_events_prenda ON public.product_events(prenda_id);
-CREATE INDEX IF NOT EXISTS idx_product_events_type ON public.product_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_product_favorites_profile ON public.product_favorites(profile_id);
 
--- ===========================================================================
--- Trigger: autogenera perfiles cuando se crea un usuario en auth.users
--- ===========================================================================
+-- Trigger para creación automática de perfil
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -254,13 +246,3 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ===========================================================================
--- Comentarios útiles --------------------------------------------------------
-COMMENT ON TABLE public.prendas IS 'Catálogo administrado; no representa ventas.';
-COMMENT ON COLUMN public.lens_assets.tipo IS 'Tipo de activo (glb, lens, image, etc.) para el probador virtual.';
-COMMENT ON TABLE public.tryon_sessions IS 'Sesiones de probador virtual iniciadas por los clientes.';
-COMMENT ON TABLE public.recommendations IS 'Recomendaciones generadas según preferencias/medidas.';
-COMMENT ON TABLE public.product_events IS 'Eventos para analytics (prendas más consultadas, etc.).';
-
--- Fin de archivo ------------------------------------------------------------

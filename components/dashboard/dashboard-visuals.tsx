@@ -1,7 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,24 +9,10 @@ import type { DemandTrendPoint, ProductTrafficItem, TryOnStats } from "@/lib/typ
 
 const formatNumber = (value: number) => new Intl.NumberFormat("es-CO").format(value)
 
-const dayShortFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "short" })
-
-const FEEDBACK_FALLBACK = [
-  { key: "positive", name: "Disponible", value: 60 },
-  { key: "neutral", name: "Atención", value: 25 },
-  { key: "negative", name: "Crítico", value: 15 },
-]
-
-type TrafficPalette = Record<string, { bg: string; text: string }>
-
 type DashboardVisualsProps = {
   panelClass: string
   demandTrendData: DemandTrendPoint[]
   productTrafficData: ProductTrafficItem[]
-  totalProducts: number
-  lowStockProducts: number
-  criticalAlerts: number
-  trafficPalette: TrafficPalette
   tryOnSummary: TryOnStats
 }
 
@@ -35,42 +20,13 @@ export function DashboardVisuals({
   panelClass,
   demandTrendData,
   productTrafficData,
-  totalProducts,
-  lowStockProducts,
-  criticalAlerts,
-  trafficPalette,
   tryOnSummary,
 }: DashboardVisualsProps) {
-  const audienceLineData = useMemo(() => {
-    return demandTrendData.map((point) => {
-      const date = new Date(point.date)
-      return {
-        day: dayShortFormatter.format(date),
-        views: point.views,
-        tryons: point.tryons,
-        returns: Math.max(0, Math.round(point.tryons * 0.35)),
-      }
-    })
-  }, [demandTrendData])
-
-  const stockHealthy = Math.max(totalProducts - lowStockProducts, 0)
-  const stockWarning = Math.max(lowStockProducts - criticalAlerts, 0)
-  const stockCritical = Math.max(criticalAlerts, 0)
-
-  const rawFeedback = [
-    { key: "positive", name: "Disponible", value: stockHealthy },
-    { key: "neutral", name: "Atención", value: stockWarning },
-    { key: "negative", name: "Crítico", value: stockCritical },
-  ]
-  const feedbackTotal = rawFeedback.reduce((acc, item) => acc + item.value, 0)
-  const feedbackData = feedbackTotal > 0 ? rawFeedback : FEEDBACK_FALLBACK
-
   const visitsBySourceData = productTrafficData.map((item) => ({
     key: item.type,
     label: item.label,
     value: item.count,
   }))
-  const maxVisitValue = visitsBySourceData.reduce((acc, item) => Math.max(acc, item.value), 0)
 
   const totalViews = visitsBySourceData.find((item) => item.key === "view")?.value ?? 0
   const totalTryOns = visitsBySourceData.find((item) => item.key === "tryon")?.value ?? 0
@@ -106,7 +62,7 @@ export function DashboardVisuals({
       <section className="grid gap-6 xl:grid-cols-12">
         <Card
           className={`${panelClass} xl:col-span-8`}
-          style={{ background: "linear-gradient(160deg, #eff0ff 0%, #dfe1ff 100%)" }}
+          style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}
         >
           <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
             <div>
@@ -163,7 +119,7 @@ export function DashboardVisuals({
           </CardContent>
         </Card>
 
-        <Card className={`${panelClass} xl:col-span-4`} style={{ background: "linear-gradient(145deg, #fdf2ff 0%, #f5d9ff 100%)" }}>
+        <Card className={`${panelClass} xl:col-span-4`} style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}>
           <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-none p-6 pb-3">
             <div>
               <CardTitle className="text-lg font-semibold text-slate-900">Usuarios activos</CardTitle>
@@ -188,156 +144,31 @@ export function DashboardVisuals({
                 <span>Usuarios</span>
               </div>
               <div className="mt-3 space-y-2">
-                {visitsBySourceData.slice(0, 4).map((entry) => (
-                  <div key={entry.key} className="flex items-center justify-between">
-                    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${trafficPalette[entry.key]?.bg ?? "bg-slate-100"} ${trafficPalette[entry.key]?.text ?? "text-slate-600"}`}>
-                      <span className="h-2 w-2 rounded-full bg-current" />
-                      {entry.label}
-                    </span>
-                    <span className="text-sm font-semibold text-slate-900">{formatNumber(entry.value)}</span>
-                  </div>
-                ))}
+                {visitsBySourceData.slice(0, 4).map((entry, index) => {
+                  const chipPalette = [
+                    "bg-indigo-100 text-indigo-700",
+                    "bg-sky-100 text-sky-600",
+                    "bg-emerald-100 text-emerald-600",
+                    "bg-rose-100 text-rose-600",
+                  ]
+                  const chipClass = chipPalette[index % chipPalette.length]
+
+                  return (
+                    <div key={entry.key} className="flex items-center justify-between">
+                      <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${chipClass}`}>
+                        <span className="h-2 w-2 rounded-full bg-current" />
+                        {entry.label}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-900">{formatNumber(entry.value)}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-12">
-        <Card
-          className={`${panelClass} xl:col-span-12`}
-          style={{ background: "linear-gradient(135deg, #dbeafe 0%, #c7d2fe 100%)" }}
-        >
-          <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Audiencia del probador</CardTitle>
-              <CardDescription className="text-sm text-slate-600">
-                Curvas comparativas de views, try-ons y devoluciones.
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="rounded-full border-transparent bg-slate-100 text-slate-600">
-              Semana móvil
-            </Badge>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <ChartContainer
-              className="h-[260px]"
-              config={{
-                views: { label: "Vistas", color: "#22c55e" },
-                tryons: { label: "Try-ons", color: "#2563eb" },
-                returns: { label: "Devoluciones", color: "#f97316" },
-              }}
-            >
-              <LineChart data={audienceLineData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-200" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} width={32} />
-                <RechartsTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="views" stroke="var(--color-views)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="tryons" stroke="var(--color-tryons)" strokeWidth={2} dot={false} />
-                <Line
-                  type="monotone"
-                  dataKey="returns"
-                  stroke="var(--color-returns)"
-                  strokeWidth={2}
-                  dot={false}
-                  strokeDasharray="4 4"
-                />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-12">
-        <Card
-          className={`${panelClass} xl:col-span-6`}
-          style={{ background: "linear-gradient(135deg, #ffe0f1 0%, #ffd1ea 100%)" }}
-        >
-          <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Feedback inventario</CardTitle>
-              <CardDescription className="text-sm text-slate-600">Estado global de existencias por criticidad.</CardDescription>
-            </div>
-            <span className="text-xs font-semibold text-slate-500">{formatNumber(feedbackTotal || 100)} ítems</span>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <ChartContainer
-              className="h-[240px]"
-              config={{
-                positive: { label: "Disponible", color: "#7c3aed" },
-                neutral: { label: "Atención", color: "#0ea5e9" },
-                negative: { label: "Crítico", color: "#ec4899" },
-              }}
-            >
-              <PieChart>
-                <Pie
-                  data={feedbackData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  strokeWidth={4}
-                >
-                  {feedbackData.map((entry) => (
-                    <Cell key={entry.key} fill={`var(--color-${entry.key})`} />
-                  ))}
-                </Pie>
-                <RechartsTooltip content={<ChartTooltipContent nameKey="key" />} />
-              </PieChart>
-            </ChartContainer>
-            <div className="mt-4 grid gap-2 text-sm">
-              {feedbackData.map((entry) => {
-                const percentage = feedbackTotal > 0 ? Math.round((entry.value / feedbackTotal) * 100) : entry.value
-                return (
-                  <div key={entry.key} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-slate-600">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `var(--color-${entry.key})` }} />
-                      {entry.name}
-                    </span>
-                    <span className="font-semibold text-slate-900">{percentage}%</span>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`${panelClass} xl:col-span-6`}
-          style={{ background: "linear-gradient(135deg, #fff4d7 0%, #ffe6a7 100%)" }}
-        >
-          <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
-            <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Visitas por canal</CardTitle>
-              <CardDescription className="text-sm text-slate-600">Desglose semanal por fuente de tráfico.</CardDescription>
-            </div>
-            <Badge variant="outline" className="rounded-full border-transparent bg-slate-100 text-slate-600">
-              Semana
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4 px-6 pb-6">
-            {visitsBySourceData.map((entry) => {
-              const width = maxVisitValue > 0 ? Math.round((entry.value / maxVisitValue) * 100) : 0
-              const palette = trafficPalette[entry.key] ?? { bg: "bg-slate-100", text: "text-slate-600" }
-              return (
-                <div key={entry.key} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
-                    <span>{entry.label}</span>
-                    <span>{formatNumber(entry.value)}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div className={`h-2 rounded-full ${palette.bg} ${palette.text}`} style={{ width: `${width}%` }} />
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-
-      </section>
     </>
   )
 }

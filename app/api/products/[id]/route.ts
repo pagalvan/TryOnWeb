@@ -6,7 +6,7 @@ import { productUpdateSchema } from "@/lib/schemas/product"
 import { syncLensAsset } from "../lens-helpers"
 
 const PRODUCT_SELECT = `
-  id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata,
+  id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata, talla, color,
   categorias:categoria_id ( id, nombre ),
   inventario_items ( id, ubicacion, cantidad, cantidad_minima, estado ),
   lens_assets ( id, prenda_id, tipo, url, provider, version, metadata, activo, created_at, updated_at )
@@ -17,6 +17,8 @@ const mapProduct = (producto: any) => ({
   categorias: Array.isArray(producto.categorias) ? producto.categorias[0] ?? null : producto.categorias ?? null,
   inventario_items: producto.inventario_items ?? [],
   lens_assets: Array.isArray(producto.lens_assets) ? producto.lens_assets : [],
+  tallas: producto.talla ? producto.talla.split(",").map((t: string) => t.trim()) : [],
+  colores: producto.color ? producto.color.split(",").map((c: string) => c.trim()) : [],
 })
 
 export const runtime = "nodejs"
@@ -51,10 +53,12 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
   }
 
   const payload = await request.json().catch(() => null)
+  console.log("Update Payload:", JSON.stringify(payload, null, 2))
   const result = productUpdateSchema.safeParse(payload)
 
   if (!result.success) {
     const errors = result.error.errors.map((issue) => issue.message)
+    console.log("Validation Errors:", errors)
     return NextResponse.json({ message: "Validación fallida", errors }, { status: 422 })
   }
 
@@ -67,6 +71,8 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
     estado,
     destacado,
     metadata,
+    tallas,
+    colores,
     lensAsset,
   } = result.data
   const supabase = getSupabaseAdminClient()
@@ -82,6 +88,14 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
   if (metadata !== undefined) {
     updatePayload.metadata = metadata && Object.keys(metadata).length > 0 ? metadata : null
   }
+  if (tallas !== undefined) {
+    updatePayload.talla = tallas && tallas.length > 0 ? tallas.join(", ") : null
+  }
+  if (colores !== undefined) {
+    updatePayload.color = colores && colores.length > 0 ? colores.join(", ") : null
+  }
+
+  console.log("Supabase Update Payload:", JSON.stringify(updatePayload, null, 2))
 
   const { error } = await supabase.from("prendas").update(updatePayload).eq("id", id)
   if (error) {

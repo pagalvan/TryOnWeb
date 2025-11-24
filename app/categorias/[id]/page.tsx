@@ -8,15 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCategory, type Category } from "@/lib/services/categories"
 import { listProducts, type InventoryProduct } from "@/lib/services/inventory"
-
-const COLOR_CLASSES = [
-  "bg-blue-500",
-  "bg-purple-500",
-  "bg-green-500",
-  "bg-orange-500",
-  "bg-red-500",
-  "bg-teal-500",
-]
+import { CATEGORY_ICON_MAP, type IconValue } from "@/components/categories/types"
 
 const formatCurrency = (value: number | null) => {
   if (value === null || value === undefined) return "—"
@@ -47,7 +39,9 @@ export default async function CategoriaDetallePage({ params }: PageParams) {
     return notFound()
   }
 
-  const colorClass = COLOR_CLASSES[Math.abs(id.charCodeAt(0)) % COLOR_CLASSES.length]
+  const IconComponent = category.icon
+    ? CATEGORY_ICON_MAP[category.icon as IconValue]
+    : undefined
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,8 +59,15 @@ export default async function CategoriaDetallePage({ params }: PageParams) {
 
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div className={`h-14 w-14 rounded-xl ${colorClass} flex items-center justify-center text-white text-2xl`}>
-              {category.icon ? <span>{category.icon}</span> : <Package className="h-7 w-7" />}
+            <div 
+              className="h-14 w-14 rounded-xl flex items-center justify-center text-white text-2xl backdrop-blur-sm shadow-inner"
+              style={{
+                background: "linear-gradient(135deg, rgba(32, 163, 169, 0.65), rgba(13, 110, 123, 0.35))",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                boxShadow: "0 10px 25px rgba(13, 110, 123, 0.15)",
+              }}
+            >
+              {IconComponent ? <IconComponent className="h-7 w-7" /> : <Package className="h-7 w-7" />}
             </div>
             <div className="flex-1">
               <CardTitle className="text-3xl font-bold text-foreground mb-2">{category.nombre}</CardTitle>
@@ -82,8 +83,15 @@ export default async function CategoriaDetallePage({ params }: PageParams) {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+              <div 
+                className="h-10 w-10 rounded-lg flex items-center justify-center text-white backdrop-blur-sm shadow-inner"
+                style={{
+                  background: "linear-gradient(135deg, rgba(32, 163, 169, 0.65), rgba(13, 110, 123, 0.35))",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  boxShadow: "0 10px 25px rgba(13, 110, 123, 0.15)",
+                }}
+              >
+                <ShoppingBag className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Productos asociados</p>

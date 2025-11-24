@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Plus,
   MoreVertical,
@@ -11,14 +12,6 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  Shirt,
-  Sparkles,
-  ShoppingBag,
-  Gem,
-  Watch,
-  Palette,
-  Tag,
-  type LucideIcon,
 } from "lucide-react"
 
 import { Navbar } from "@/components/navbar"
@@ -31,11 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import {
   createCategory,
@@ -45,66 +33,24 @@ import {
   type Category,
 } from "@/lib/services/categories"
 
-type IconOption = {
-  value: string
-  label: string
-  icon: LucideIcon
-}
-
-const CATEGORY_ICON_OPTIONS: IconOption[] = [
-  { value: "Shirt", label: "Prendas", icon: Shirt },
-  { value: "ShoppingBag", label: "Accesorios", icon: ShoppingBag },
-  { value: "Gem", label: "Joyas", icon: Gem },
-  { value: "Watch", label: "Relojes", icon: Watch },
-  { value: "Palette", label: "Arte y diseño", icon: Palette },
-  { value: "Sparkles", label: "Destacados", icon: Sparkles },
-  { value: "Tag", label: "Ofertas", icon: Tag },
-]
-
-type IconValue = (typeof CATEGORY_ICON_OPTIONS)[number]["value"]
-
-const CATEGORY_ICON_MAP: Record<IconValue, LucideIcon> = CATEGORY_ICON_OPTIONS.reduce(
-  (acc, option) => {
-    return { ...acc, [option.value]: option.icon }
-  },
-  {} as Record<IconValue, LucideIcon>
-)
-
-type CategoryFormState = {
-  id: string | null
-  nombre: string
-  descripcion: string
-  estado: "activa" | "inactiva"
-  icon: IconValue | ""
-}
-
-const STATUS_OPTIONS = [
-  { value: "activa", label: "Activa" },
-  { value: "inactiva", label: "Inactiva" },
-]
-
-const emptyFormState = (): CategoryFormState => ({
-  id: null,
-  nombre: "",
-  descripcion: "",
-  estado: "activa",
-  icon: "",
-})
+import { CategoryDialog } from "@/components/categories/category-dialog"
+import {
+  CATEGORY_ICON_MAP,
+  getInitialCategoryForm,
+  type CategoryFormState,
+  type IconValue,
+} from "@/components/categories/types"
 
 export default function CategoriasPage() {
+  const router = useRouter()
   const { toast } = useToast()
   const [categorias, setCategorias] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [formState, setFormState] = useState<CategoryFormState>(emptyFormState)
+  const [formState, setFormState] = useState<CategoryFormState>(getInitialCategoryForm())
   const [saving, setSaving] = useState(false)
 
   const isEditing = useMemo(() => formState.id !== null, [formState.id])
-  const selectedIconOption = useMemo(
-    () => CATEGORY_ICON_OPTIONS.find((option) => option.value === formState.icon) ?? null,
-    [formState.icon]
-  )
-  const SelectedIcon = selectedIconOption?.icon ?? null
 
   const loadCategories = useCallback(async () => {
     setLoading(true)
@@ -113,18 +59,22 @@ export default function CategoriasPage() {
       setCategorias(data)
     } catch (error) {
       const message = error instanceof Error ? error.message : "No pudimos cargar las categorías"
+      if (message === "No autorizado" || message === "Permisos insuficientes") {
+        router.replace("/")
+        return
+      }
       toast({ title: "Error", description: message, variant: "destructive" })
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, router])
 
   useEffect(() => {
     loadCategories()
   }, [loadCategories])
 
   const handleOpenDialog = () => {
-    setFormState(emptyFormState())
+    setFormState(getInitialCategoryForm())
     setDialogOpen(true)
   }
 
@@ -145,7 +95,7 @@ export default function CategoriasPage() {
   const handleDialogChange = (open: boolean) => {
     setDialogOpen(open)
     if (!open) {
-      setFormState(emptyFormState())
+      setFormState(getInitialCategoryForm())
       setSaving(false)
     }
   }
@@ -200,11 +150,15 @@ export default function CategoriasPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+      <main className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="font-display text-4xl font-bold text-foreground mb-2">Categorías</h1>
-            <p className="text-muted-foreground">Organiza tus productos por categorías</p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-1 w-8 bg-primary rounded-full" />
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Gestión de Categorías</p>
+            </div>
+            <h1 className="mb-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Categorías</h1>
+            <p className="text-lg text-muted-foreground">Organiza tus productos por categorías</p>
           </div>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleOpenDialog}>
             <Plus className="mr-2 h-5 w-5" />
@@ -239,11 +193,11 @@ export default function CategoriasPage() {
                 : undefined
 
               return (
-                <Card key={categoria.id} className="hover:shadow-lg transition-all group">
-                  <CardContent className="p-6">
+                <Card key={categoria.id} className="hover:shadow-lg transition-all group flex flex-col h-full">
+                  <CardContent className="p-6 flex flex-col h-full">
                     <div className="flex items-start justify-between mb-4">
                       <div
-                        className={`h-12 w-12 rounded-xl flex items-center justify-center text-white text-xl backdrop-blur-sm shadow-inner`}
+                        className="h-12 w-12 rounded-xl flex items-center justify-center text-white text-xl backdrop-blur-sm shadow-inner"
                         style={{
                           background: "linear-gradient(135deg, rgba(32, 163, 169, 0.65), rgba(13, 110, 123, 0.35))",
                           border: "1px solid rgba(255, 255, 255, 0.25)",
@@ -287,14 +241,14 @@ export default function CategoriasPage() {
                     </div>
 
                     {categoria.descripcion && (
-                      <p className="text-muted-foreground mb-4 text-sm">{categoria.descripcion}</p>
+                      <p className="text-muted-foreground mb-4 text-sm line-clamp-2">{categoria.descripcion}</p>
                     )}
 
                     <p className="text-sm text-muted-foreground mb-6">
                       {categoria.productCount} producto{categoria.productCount === 1 ? "" : "s"}
                     </p>
 
-                    <div className="pt-4 border-t border-border">
+                    <div className="mt-auto pt-4 border-t border-border">
                       <Link href={`/categorias/${categoria.id}`}>
                         <Button variant="outline" className="w-full bg-transparent">
                           Ver productos
@@ -309,97 +263,15 @@ export default function CategoriasPage() {
         )}
       </main>
 
-      <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar categoría" : "Nueva categoría"}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                id="nombre"
-                value={formState.nombre}
-                onChange={(event) => setFormState((prev) => ({ ...prev, nombre: event.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="descripcion">Descripción</Label>
-              <Textarea
-                id="descripcion"
-                value={formState.descripcion}
-                onChange={(event) => setFormState((prev) => ({ ...prev, descripcion: event.target.value }))}
-                placeholder="Describe brevemente esta categoría"
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Estado</Label>
-                <Select
-                  value={formState.estado}
-                  onValueChange={(value: "activa" | "inactiva") => setFormState((prev) => ({ ...prev, estado: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Icono</Label>
-                <Select
-                  value={formState.icon}
-                  onValueChange={(value: IconValue) => setFormState((prev) => ({ ...prev, icon: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un icono" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORY_ICON_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <span className="flex items-center gap-2">
-                          <option.icon className="h-4 w-4" />
-                          {option.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  Vista previa:
-                  {SelectedIcon ? (
-                    <>
-                      <SelectedIcon className="h-4 w-4" />
-                      <span>{selectedIconOption?.label}</span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground/80">Selecciona un icono para esta categoría</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => handleDialogChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={saving}>
-              {saving ? "Guardando..." : isEditing ? "Actualizar" : "Crear"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CategoryDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogChange}
+        formState={formState}
+        onFormChange={setFormState}
+        onSubmit={handleSubmit}
+        saving={saving}
+        isEditing={isEditing}
+      />
     </div>
   )
 }
