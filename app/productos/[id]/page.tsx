@@ -29,6 +29,8 @@ import {
   formatCurrency,
   getLensId,
   getPrimaryLensAsset,
+  getLensIdForColor,
+  getLensAssetForColor,
   type LensAsset,
 } from "@/components/virtual-try-on/types"
 import { GeminiTryOnDialog } from "@/components/virtual-try-on/gemini-try-on-dialog"
@@ -300,8 +302,8 @@ export default function ProductoDetallePage() {
     return producto.inventario_items.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
   }, [producto])
 
-  const lensId = useMemo(() => getLensId(producto), [producto])
-  const lensAsset = useMemo(() => getPrimaryLensAsset(producto), [producto])
+  const lensId = useMemo(() => getLensIdForColor(producto, selectedColor), [producto, selectedColor])
+  const lensAsset = useMemo(() => getLensAssetForColor(producto, selectedColor), [producto, selectedColor])
   const hasLens = lensId.length > 0
 
   useEffect(() => {
@@ -633,7 +635,7 @@ export default function ProductoDetallePage() {
                 <>
                   <CameraKitPlayer
                     ref={playerRef}
-                    key={`${producto.id}-hero-${cameraFacing}`}
+                    key={`${producto.id}-hero-${cameraFacing}-${lensId}`}
                     apiToken={cameraToken}
                     lensId={lensId}
                     lensGroupId={lensGroupId}

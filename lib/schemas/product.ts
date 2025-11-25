@@ -32,6 +32,15 @@ export const productPayloadSchema = z.object({
   stockLocationId: z.string().uuid().optional().or(z.literal("")).nullable(),
   ubicacion: z.string().min(2).optional().or(z.literal("")).nullable(),
   lensAsset: lensAssetPayloadSchema.optional().nullable(),
+  inventory: z.array(z.object({
+    locationId: z.string().uuid(),
+    quantity: z.number().int().min(0),
+  })).optional(),
+  lenses: z.array(z.object({
+    id: z.string().optional(),
+    lensId: z.string(),
+    colorCode: z.string().optional(),
+  })).optional(),
 })
 
 export const productUpdateSchema = productPayloadSchema.partial().extend({

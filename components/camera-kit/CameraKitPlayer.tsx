@@ -78,6 +78,7 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [lensStatus, setLensStatus] = useState<LensStatus>("idle")
   const [lensError, setLensError] = useState<string | null>(null)
+  const [resetKey, setResetKey] = useState(0)
 
   // Use refs for callbacks to avoid re-triggering effects
   const onReadyRef = useRef(onReady)
@@ -87,6 +88,14 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
     onReadyRef.current = onReady
     onErrorRef.current = onError
   }, [onReady, onError])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+       const msg = "La cámara requiere una conexión segura (HTTPS). Por favor, usa HTTPS."
+       console.warn(msg)
+       setCameraError(msg)
+    }
+  }, [])
 
   useImperativeHandle(ref, () => ({
     captureSnapshot: async () => {
@@ -107,7 +116,7 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
   useEffect(() => {
     let isCancelled = false
 
-    const initializeSession = async () => {
+    const initializeSession = async (retryCount = 0) => {
       if (!canvasRef.current) return
 
       setBootstrapping(true)
@@ -136,6 +145,9 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
         if (typeof cameraKitModule.createUserMediaSource === "function") {
           source = await cameraKitModule.createUserMediaSource({ cameraType: facingToCameraKit(cameraFacing) })
         } else {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+             throw new Error("Tu navegador no permite acceso a la cámara en este contexto (posiblemente falta HTTPS).")
+          }
           mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: cameraFacing === "environment" ? { ideal: "environment" } : "user" },
             audio: false,
@@ -174,10 +186,31 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
       } catch (error) {
         if (isCancelled) return
 
-        const message =
+        console.error("Camera Kit initialization error:", error)
+
+        if (error instanceof Error && error.message.includes("transferControlToOffscreen")) {
+            console.log("Canvas transfer error detected, forcing reset...")
+            setResetKey(prev => prev + 1)
+            return
+        }
+
+        // Retry logic for network/cache errors
+        if (retryCount < 3) {
+          console.log(`Retrying Camera Kit initialization (Attempt ${retryCount + 1})...`)
+          setTimeout(() => initializeSession(retryCount + 1), 1500)
+          return
+        }
+
+        let message =
           error instanceof Error
             ? error.message
             : "No se pudo activar la cámara. Verifica los permisos del navegador."
+        
+        if (message.includes("Network request") || message.includes("cache lookup")) {
+            message = "Error de red al cargar componentes de cámara. Verifica tu conexión."
+        } else if (message.includes("undefined is not an object")) {
+            message = "Tu navegador no es compatible o requiere HTTPS."
+        }
 
         setCameraError(message)
         setBootstrapping(false)
@@ -211,7 +244,7 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
 
       cameraKitRef.current = null
     }
-  }, [apiToken, cameraFacing]) // Removed onReady/onError from deps
+  }, [apiToken, cameraFacing, resetKey]) // Removed onReady/onError from deps
 
   useEffect(() => {
     const applyLens = async () => {
@@ -324,7 +357,7 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
   return (
     <div className={className} style={style}>
       <div className="relative w-full h-full min-h-[240px] overflow-hidden rounded-xl bg-black">
-        <canvas ref={canvasRef} className="h-full w-full" aria-hidden={false} />
+        <canvas ref={canvasRef} key={`${cameraFacing}-${resetKey}`} className="h-full w-full" aria-hidden={false} />
         {shouldShowOverlay ? (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/70 px-6 text-center text-sm text-white">
             {cameraError && <p>{cameraError}</p>}

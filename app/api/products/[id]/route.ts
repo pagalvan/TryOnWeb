@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { productUpdateSchema } from "@/lib/schemas/product"
-import { syncLensAsset } from "../lens-helpers"
+import { syncLensAsset, syncLensAssets } from "../lens-helpers"
+import { resolveInventoryLocation } from "../location-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata, talla, color,
@@ -74,6 +75,8 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
     tallas,
     colores,
     lensAsset,
+    inventory,
+    lenses,
   } = result.data
   const supabase = getSupabaseAdminClient()
 
@@ -102,7 +105,69 @@ export async function PUT(request: NextRequest, { params }: { params: ProductPar
     return NextResponse.json({ message: error.message }, { status: 400 })
   }
 
-  if (Object.prototype.hasOwnProperty.call(result.data, "lensAsset")) {
+  // Handle inventory updates
+  if (inventory && inventory.length > 0) {
+    for (const item of inventory) {
+      const targetLocation = await resolveInventoryLocation(supabase, {
+        locationId: item.locationId,
+      })
+
+      if (targetLocation) {
+        const { data: existing } = await supabase
+          .from("inventario_items")
+          .select("id, cantidad")
+          .eq("prenda_id", id)
+          .eq("bodega_id", targetLocation.id)
+          .maybeSingle()
+
+        if (existing) {
+          if (existing.cantidad !== item.quantity) {
+            await supabase
+              .from("inventario_items")
+              .update({ cantidad: item.quantity })
+              .eq("id", existing.id)
+            
+            // Log movement
+            await supabase.from("inventario_movimientos").insert({
+              inventario_id: existing.id,
+              tipo: item.quantity > existing.cantidad ? "entrada" : "salida",
+              cantidad: Math.abs(item.quantity - existing.cantidad),
+              motivo: "Actualización de producto (Edición)",
+            })
+          }
+        } else {
+          const { data: newItem, error: insertError } = await supabase
+            .from("inventario_items")
+            .insert({
+              prenda_id: id,
+              bodega_id: targetLocation.id,
+              ubicacion: targetLocation.nombre,
+              cantidad: item.quantity,
+              cantidad_minima: 0,
+              estado: "ok",
+            })
+            .select("id")
+            .single()
+          
+          if (!insertError && newItem) {
+             await supabase.from("inventario_movimientos").insert({
+              inventario_id: newItem.id,
+              tipo: "entrada",
+              cantidad: item.quantity,
+              motivo: "Stock inicial (Edición de producto)",
+            })
+          }
+        }
+      }
+    }
+  }
+
+  if (lenses && lenses.length > 0) {
+    const { error: lensAssetsError } = await syncLensAssets(supabase, id, lenses)
+    if (lensAssetsError) {
+       console.error("Error syncing multiple lenses", lensAssetsError)
+    }
+  } else if (Object.prototype.hasOwnProperty.call(result.data, "lensAsset")) {
     const { error: lensAssetError } = await syncLensAsset(supabase, id, lensAsset ?? null)
     if (lensAssetError) {
       return NextResponse.json({ message: lensAssetError.message ?? "No pudimos sincronizar el Lens" }, { status: 400 })

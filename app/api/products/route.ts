@@ -4,7 +4,7 @@ import { ensureAdmin, getAuthenticatedUser } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { productPayloadSchema } from "@/lib/schemas/product"
 import { resolveInventoryLocation } from "./location-helpers"
-import { syncLensAsset } from "./lens-helpers"
+import { syncLensAsset, syncLensAssets } from "./lens-helpers"
 
 const PRODUCT_SELECT = `
   id, nombre, descripcion, sku, valor_unitario, estado, destacado, categoria_id, metadata, talla, color,
@@ -123,6 +123,8 @@ export async function POST(request: NextRequest) {
     stockLocationId,
     ubicacion,
     lensAsset,
+    inventory,
+    lenses,
   } = result.data
 
   const supabase = getSupabaseAdminClient()
@@ -185,10 +187,56 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { error: lensAssetError } = await syncLensAsset(supabase, data.id, lensAsset ?? null)
-  if (lensAssetError) {
-    await supabase.from("prendas").delete().eq("id", data.id)
-    return NextResponse.json({ message: lensAssetError.message ?? "No pudimos asociar el Lens" }, { status: 400 })
+  // Handle multiple inventory locations
+  if (inventory && inventory.length > 0) {
+    for (const item of inventory) {
+      if (item.quantity <= 0) continue
+
+      // We need to resolve the location name from the ID since the table stores both
+      // Ideally we should fetch locations first, but let's assume we can get it or just use ID if needed
+      // But wait, resolveInventoryLocation uses ID.
+      const targetLocation = await resolveInventoryLocation(supabase, {
+        locationId: item.locationId,
+      })
+
+      if (targetLocation) {
+         const { data: stockItem, error: stockError } = await supabase
+          .from("inventario_items")
+          .insert({
+            prenda_id: data.id,
+            ubicacion: targetLocation.nombre,
+            bodega_id: targetLocation.id,
+            cantidad: item.quantity,
+            cantidad_minima: 0,
+            estado: "ok",
+          })
+          .select("id")
+          .single()
+
+        if (!stockError && stockItem) {
+          await supabase.from("inventario_movimientos").insert({
+            inventario_id: stockItem.id,
+            tipo: "entrada",
+            cantidad: item.quantity,
+            motivo: "Stock inicial (Creación de producto - Múltiple)",
+          })
+        }
+      }
+    }
+  }
+
+  if (lenses && lenses.length > 0) {
+    const { error: lensAssetsError } = await syncLensAssets(supabase, data.id, lenses)
+    if (lensAssetsError) {
+       console.error("Error syncing multiple lenses", lensAssetsError)
+    }
+  } else {
+    // Fallback to single lens asset for backward compatibility
+    const { error: lensAssetError } = await syncLensAsset(supabase, data.id, lensAsset ?? null)
+    if (lensAssetError) {
+      await supabase.from("prendas").delete().eq("id", data.id)
+      return NextResponse.json({ message: lensAssetError.message ?? "No pudimos asociar el Lens" }, { status: 400 })
+    }
   }
 
   const { data: refreshed } = await supabase

@@ -13,6 +13,8 @@ export type ProductFormState = {
   bodegaId: string
   tallas: string
   colores: string
+  inventory: { locationId: string; quantity: number }[]
+  lenses: { id?: string; lensId: string; colorCode?: string }[]
 }
 
 export type StockFormState = {

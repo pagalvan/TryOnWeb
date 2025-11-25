@@ -17,6 +17,8 @@ export function getInitialProductForm(options: InitialFormOptions = {}): Product
     bodegaId: options.locationId ?? "",
     tallas: "",
     colores: "",
+    inventory: [],
+    lenses: [],
   }
 }
 

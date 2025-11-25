@@ -119,3 +119,46 @@ export function getLensId(product?: LensProduct | null) {
   const fallback = typeof product?.metadata?.lensId === "string" ? product.metadata.lensId.trim() : ""
   return fallback
 }
+
+export function getLensIdForColor(product: LensProduct | null | undefined, colorCode: string | null) {
+  if (!product) return ""
+  
+  // If a specific color is selected, try to find a matching lens asset
+  if (colorCode) {
+    const asset = getLensAssetForColor(product, colorCode)
+    if (asset) {
+      // Extract ID from this specific asset
+      const metadata = asset.metadata as Record<string, unknown> | null
+      if (metadata) {
+        const candidates = [metadata.lens_id, metadata.lensId, metadata.id]
+        for (const candidate of candidates) {
+          if (typeof candidate === "string" && candidate.trim().length > 0) {
+            return candidate.trim()
+          }
+        }
+      }
+      const fromUrl = extractLensIdFromUrl(asset.url)
+      if (fromUrl) return fromUrl
+    }
+  }
+
+  // Fallback to default logic if no color match found
+  return getLensId(product)
+}
+
+export function getLensAssetForColor(product: LensProduct | null | undefined, colorCode: string | null): LensAsset | null {
+  if (!product) return null
+  
+  if (colorCode) {
+    const assets = Array.isArray(product.lens_assets) ? product.lens_assets : []
+    const matchingAsset = assets.find(asset => {
+      if (!asset || asset.activo === false) return false
+      const meta = asset.metadata as Record<string, unknown> | null
+      return meta?.color_code === colorCode
+    })
+    
+    if (matchingAsset) return matchingAsset
+  }
+  
+  return getPrimaryLensAsset(product)
+}

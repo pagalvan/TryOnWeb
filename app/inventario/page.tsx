@@ -49,6 +49,7 @@ import {
   buildLensAssetPayload,
   getProductLensId,
 } from "@/components/inventory/utils"
+import { extractLensIdFromUrl } from "@/components/virtual-try-on/types"
 import { AdminGuard } from "@/components/auth/admin-guard"
 
 const ALL_LOCATIONS_VALUE = "all"
@@ -207,6 +208,22 @@ export default function InventarioPage() {
         ? producto.colores
         : ""
 
+    // Map existing inventory items to form state
+    const inventory = (producto.inventario_items || []).map(item => ({
+      locationId: item.bodega_id || item.bodega?.id || "",
+      quantity: item.cantidad || 0
+    }))
+
+    // Map existing lens assets to form state
+    const lenses = (producto.lens_assets || []).map(asset => {
+      const metadata = asset.metadata as any || {}
+      return {
+        id: asset.id,
+        lensId: metadata.lens_id || metadata.lensId || extractLensIdFromUrl(asset.url) || "",
+        colorCode: metadata.color_code || metadata.colorCode || ""
+      }
+    })
+
     setProductForm({
       id: producto.id,
       nombre: producto.nombre ?? "",
@@ -222,6 +239,8 @@ export default function InventarioPage() {
       bodegaId: fallbackLocationId,
       tallas,
       colores,
+      inventory,
+      lenses,
     })
     setProductDialogOpen(true)
   }
@@ -250,18 +269,14 @@ export default function InventarioPage() {
       return
     }
 
-    const stockInicialNumber = Number(productForm.stockInicial) || 0
-    if (!productoEnEdicion && stockInicialNumber > 0 && !productForm.bodegaId) {
-      toast({
-        title: "Selecciona una bodega",
-        description: "El stock inicial requiere una bodega asignada.",
-        variant: "destructive",
-      })
-      return
+    // Validate inventory if adding new product
+    if (!productoEnEdicion && (!productForm.inventory || productForm.inventory.length === 0)) {
+       // Optional: Allow creating without stock? Yes, usually.
     }
 
     setSavingProduct(true)
     const metadata = buildProductMetadata(productForm, productoEnEdicion?.metadata ?? null)
+    // Legacy lens asset builder, we might still use it if lenses array is empty but lensId is set (backward compat)
     const lensAsset = buildLensAssetPayload(productForm, productoEnEdicion)
     
     const tallas = productForm.tallas.split(",").map(t => t.trim()).filter(t => t.length > 0)
@@ -279,6 +294,8 @@ export default function InventarioPage() {
       tallas: tallas.length > 0 ? tallas : null,
       colores: colores.length > 0 ? colores : null,
       lensAsset,
+      lenses: productForm.lenses, // Send the new lenses array
+      inventory: productForm.inventory, // Send the inventory array for updates too
     }
 
     try {
@@ -287,8 +304,8 @@ export default function InventarioPage() {
       } else {
         const payload = {
           ...basePayload,
-          stockInicial: stockInicialNumber,
-          stockLocationId: productForm.bodegaId || null,
+          stockInicial: 0, // Deprecated
+          stockLocationId: null, // Deprecated
         }
         await createInventoryProduct(payload)
       }

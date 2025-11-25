@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, type ChangeEvent } from "react"
-import { Plus, Wand2, X, Upload, Loader2 } from "lucide-react"
+import { Plus, Wand2, X, Upload, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +43,7 @@ export function ProductDialog({
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleChange = (field: keyof ProductFormState, value: string | boolean) => {
+  const handleChange = (field: keyof ProductFormState, value: any) => {
     onFormChange({ ...productForm, [field]: value })
   }
 
@@ -128,11 +128,49 @@ export function ProductDialog({
     handleChange("tallas", newTallas.join(","))
   }
 
+  // Inventory Handlers
+  const handleAddInventoryRow = () => {
+    const current = productForm.inventory || []
+    handleChange("inventory", [...current, { locationId: locations[0]?.id || "", quantity: 0 }])
+  }
+
+  const handleRemoveInventoryRow = (index: number) => {
+    const current = productForm.inventory || []
+    handleChange("inventory", current.filter((_, i) => i !== index))
+  }
+
+  const handleInventoryChange = (index: number, field: "locationId" | "quantity", value: string | number) => {
+    const current = [...(productForm.inventory || [])]
+    if (current[index]) {
+      current[index] = { ...current[index], [field]: value }
+      handleChange("inventory", current)
+    }
+  }
+
+  // Lens Handlers
+  const handleAddLensRow = () => {
+    const current = productForm.lenses || []
+    handleChange("lenses", [...current, { lensId: "", colorCode: "" }])
+  }
+
+  const handleRemoveLensRow = (index: number) => {
+    const current = productForm.lenses || []
+    handleChange("lenses", current.filter((_, i) => i !== index))
+  }
+
+  const handleLensChange = (index: number, field: "lensId" | "colorCode", value: string) => {
+    const current = [...(productForm.lenses || [])]
+    if (current[index]) {
+      current[index] = { ...current[index], [field]: value }
+      handleChange("lenses", current)
+    }
+  }
+
   const canAddStock = !isEditing && locations.length > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar producto" : "Nuevo producto"}</DialogTitle>
         </DialogHeader>
@@ -343,54 +381,138 @@ export function ProductDialog({
                 </Button>
               </div>
             </div>
-
-            <div className="grid gap-2">
-              <Label>Lens ID (Snap)</Label>
-              <Input
-                placeholder="UUID..."
-                value={productForm.lensId}
-                onChange={handleInputChange("lensId")}
-              />
-            </div>
           </div>
 
-          {!isEditing && (
-            <div className="grid md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
-              <div className="grid gap-2">
-                <Label>Stock inicial</Label>
-                <Input type="number" min="0" value={productForm.stockInicial} onChange={handleInputChange("stockInicial")} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Bodega</Label>
-                {locations.length > 0 ? (
-                  <>
-                    <Select
-                      value={productForm.bodegaId}
-                      onValueChange={(value: string) => handleChange("bodegaId", value)}
-                      disabled={!canAddStock}
+          {/* Lenses Section */}
+          <div className="grid gap-2 bg-muted/30 p-4 rounded-lg border border-border/50">
+            <div className="flex items-center justify-between">
+              <Label>Lentes AR (Snapchat)</Label>
+              <Button type="button" variant="ghost" size="sm" onClick={handleAddLensRow} className="h-8 gap-2">
+                <Plus className="h-3 w-3" /> Agregar Lente
+              </Button>
+            </div>
+            
+            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+              {(productForm.lenses || []).length === 0 && (
+                <div className="text-sm text-muted-foreground italic text-center py-2">
+                  No hay lentes asignados. Agrega uno para habilitar la prueba virtual.
+                </div>
+              )}
+
+              {(productForm.lenses || []).map((lens, index) => (
+                <div key={index} className="flex gap-2 items-start">
+                  <div className="flex-1 grid gap-1">
+                    <Input
+                      placeholder="Lens ID (UUID)..."
+                      value={lens.lensId}
+                      onChange={(e) => handleLensChange(index, "lensId", e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="w-[140px]">
+                    <Select 
+                      value={lens.colorCode || "default"} 
+                      onValueChange={(val) => handleLensChange(index, "colorCode", val === "default" ? "" : val)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una bodega" />
+                        <SelectValue placeholder="Color" />
                       </SelectTrigger>
                       <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.nombre}
+                        <SelectItem value="default">Cualquiera</SelectItem>
+                        {parsedColors.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full border" style={{ backgroundColor: c.code }} />
+                              {c.code}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" className="justify-start px-0 text-sm gap-2 h-auto py-1" onClick={onRequestNewLocation}>
-                      <Plus className="h-3 w-3" />
-                      Crear bodega
-                    </Button>
-                  </>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground space-y-2">
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveLensRow(index)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {!isEditing && (
+            <div className="grid gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
+              <div className="flex items-center justify-between">
+                <Label>Inventario Inicial por Bodega</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleAddInventoryRow} 
+                  disabled={locations.length === 0}
+                  className="h-8 gap-2"
+                >
+                  <Plus className="h-3 w-3" /> Agregar Ubicación
+                </Button>
+              </div>
+
+              <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                {locations.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground space-y-2 text-center">
                     <p>Necesitas crear una bodega antes de registrar stock inicial.</p>
                     <Button size="sm" onClick={onRequestNewLocation} className="gap-2">
                       <Plus className="h-4 w-4" /> Crear bodega
                     </Button>
+                  </div>
+                )}
+
+                {(productForm.inventory || []).map((item, index) => (
+                  <div key={index} className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <Select
+                        value={item.locationId}
+                        onValueChange={(val) => handleInventoryChange(index, "locationId", val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona bodega" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((loc) => (
+                            <SelectItem key={loc.id} value={loc.id}>
+                              {loc.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-[100px]">
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Cant."
+                        value={item.quantity}
+                        onChange={(e) => handleInventoryChange(index, "quantity", parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveInventoryRow(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                {(productForm.inventory || []).length === 0 && locations.length > 0 && (
+                  <div className="text-sm text-muted-foreground italic text-center py-2">
+                    Sin stock inicial.
                   </div>
                 )}
               </div>
