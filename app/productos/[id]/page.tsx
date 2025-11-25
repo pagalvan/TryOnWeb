@@ -407,7 +407,7 @@ export default function ProductoDetallePage() {
   }
 
   const handleCapture = async () => {
-    if (!playerRef.current) return
+    if (!playerRef.current || !producto) return
 
     try {
       const blob = await playerRef.current.captureSnapshot()

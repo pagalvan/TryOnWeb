@@ -84,3 +84,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: Request) {
+  const user = await getAuthenticatedUser()
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 })
+  }
+
+  const supabase = getSupabaseAdminClient()
+  
+  // Optional: Delete image from storage if needed, but keeping it simple for now just deleting the record
+  
+  const { error } = await supabase
+    .from("saved_tryons")
+    .delete()
+    .eq("id", id)
+    .eq("profile_id", user.id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}

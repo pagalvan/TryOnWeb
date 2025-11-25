@@ -12,7 +12,7 @@ export default function HomePage() {
         {/* Hero Video */}
         <div className="w-full h-[35vh] md:h-[40vh] bg-[#11120D] overflow-hidden">
           <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-            <source src="/video pp.mp4" type="video/mp4" />
+            <source src="/video-pp.mp4" type="video/mp4" />
             Tu navegador no soporta el elemento de video.
           </video>
         </div>
