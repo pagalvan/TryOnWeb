@@ -4,8 +4,7 @@ import { redirect } from "next/navigation"
 
 import type { DashboardExportData } from "@/components/dashboard/dashboard-export-sheet"
 import type { DashboardFiltersInput, DemandTrendPoint, InventoryFlowPoint, ProductTrafficItem, TryOnTrendPoint } from "@/lib/types/analytics"
-import { fetchDashboardOverview } from "@/lib/services/dashboard"
-import { fetchReportsOverview } from "@/lib/services/reports"
+import { getDashboardOverview, getReportsOverview } from "@/lib/services/analytics.server"
 
 const COMMON_TIMEZONE: Intl.DateTimeFormatOptions["timeZone"] = "America/Bogota"
 
@@ -173,8 +172,8 @@ export type TrafficPalette = Record<string, { bg: string; text: string }>
 
 export type DashboardContext = {
   filters: DashboardFiltersInput
-  overview: Awaited<ReturnType<typeof fetchDashboardOverview>>
-  reportsOverview: Awaited<ReturnType<typeof fetchReportsOverview>>
+  overview: Awaited<ReturnType<typeof getDashboardOverview>>
+  reportsOverview: Awaited<ReturnType<typeof getReportsOverview>>
   panelClass: string
   sectionNavItems: readonly DashboardSectionLink[]
   overviewCards: readonly OverviewCardDefinition[]
@@ -186,7 +185,7 @@ export type DashboardContext = {
   trafficColors: TrafficPalette
   demandTrendData: DemandTrendPoint[]
   productTrafficData: ProductTrafficItem[]
-  tryOnSummary: Awaited<ReturnType<typeof fetchDashboardOverview>>["tryOn"]["summary"]
+  tryOnSummary: Awaited<ReturnType<typeof getDashboardOverview>>["tryOn"]["summary"]
   hasInventoryFlow: boolean
   inventoryFlowData: InventoryFlowPoint[]
   inboundTotal: number
@@ -201,8 +200,8 @@ export type DashboardContext = {
   trafficTotal: number
   criticalAlerts: number
   topProductPeak: number
-  categoriesPreview: Awaited<ReturnType<typeof fetchDashboardOverview>>["categories"]
-  lowStockPreview: Awaited<ReturnType<typeof fetchDashboardOverview>>["inventory"]["lowStock"]
+  categoriesPreview: Awaited<ReturnType<typeof getDashboardOverview>>["categories"]
+  lowStockPreview: Awaited<ReturnType<typeof getDashboardOverview>>["inventory"]["lowStock"]
   inventoryStatusSummary: { label: string; value: number }[]
   locationDistribution: {
     label: string
@@ -228,8 +227,8 @@ export type DashboardContext = {
   totalLocationValue: number
   activeLocations: number
   totalLocationUnits: number
-  movementsPreview: Awaited<ReturnType<typeof fetchDashboardOverview>>["inventory"]["movements"]
-  reportsPreview: Awaited<ReturnType<typeof fetchReportsOverview>>["recentReports"]
+  movementsPreview: Awaited<ReturnType<typeof getDashboardOverview>>["inventory"]["movements"]
+  reportsPreview: Awaited<ReturnType<typeof getReportsOverview>>["recentReports"]
   exportData: DashboardExportData
   activeCategory: string | null
   activeLocation: string | null
@@ -245,8 +244,8 @@ export const loadDashboardContext = async (
   const filters = parseFiltersFromSearchParams(resolvedSearchParams)
 
   const [overview, reportsOverview] = await Promise.all([
-    fetchDashboardOverview(filters),
-    fetchReportsOverview(),
+    getDashboardOverview(filters),
+    getReportsOverview(),
   ]).catch((error) => {
     const message = error instanceof Error ? error.message : ""
     if (message === "No autorizado" || message === "Permisos insuficientes") {
