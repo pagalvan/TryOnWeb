@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     prompt += `
       RULES FOR COLORIMETRY:
       1. Analyze the user's seasonal color palette.
-      2. When suggesting "bestColors", you MUST choose ONLY from the following list of available colors in our inventory: ${availableColors}.
+      2. When suggesting "bestColors", you MUST choose EXACTLY TWO (2) colors from the following list of available colors in our inventory: ${availableColors}.
     `;
 
     if (measurements) {
@@ -179,7 +179,10 @@ export async function POST(req: NextRequest) {
       {
         "colorimetry": {
           "season": "Season Name (in Spanish) (or 'N/A' if no image)",
-          "bestColor": { "name": "Color Name", "hex": "#RRGGBB" },
+          "bestColors": [
+            { "name": "Color Name 1", "hex": "#RRGGBB" },
+            { "name": "Color Name 2", "hex": "#RRGGBB" }
+          ],
           "description": "Brief explanation of why these colors work (in Spanish) (or 'N/A' if no image)"
         },
         "sizeRecommendation": {

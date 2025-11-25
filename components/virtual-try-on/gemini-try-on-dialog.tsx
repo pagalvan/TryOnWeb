@@ -15,13 +15,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 interface GeminiTryOnDialogProps {
   productImage: string
   productName: string
+  className?: string
 }
 
-export function GeminiTryOnDialog({ productImage, productName }: GeminiTryOnDialogProps) {
+export function GeminiTryOnDialog({ productImage, productName, className }: GeminiTryOnDialogProps) {
   const [open, setOpen] = useState(false)
   const [personImage, setPersonImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -193,9 +195,9 @@ export function GeminiTryOnDialog({ productImage, productName }: GeminiTryOnDial
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white">
+        <Button variant="secondary" className={cn("w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white", className)}>
           <Wand2 className="mr-2 h-4 w-4" />
-          Probador Virtual IA
+          Probador IA
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">

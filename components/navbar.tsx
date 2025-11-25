@@ -307,9 +307,10 @@ export function Navbar() {
             )}
 
             {userRole && (
-              <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
                 <TryOnHistorySheet />
-                <DropdownMenu>
+                <div className="hidden md:flex items-center gap-3">
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                       <Avatar className="h-10 w-10">
@@ -389,6 +390,7 @@ export function Navbar() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
               </div>
             )}
 

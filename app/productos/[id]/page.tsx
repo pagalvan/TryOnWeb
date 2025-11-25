@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler, Save } from "lucide-react"
+import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler, Save, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -625,18 +625,32 @@ export default function ProductoDetallePage() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           <div ref={mediaRef}>
-            <div className="aspect-square bg-accent rounded-2xl overflow-hidden mb-4 relative">
+            <div className={cn(
+              "bg-accent rounded-2xl overflow-hidden mb-4 relative transition-all duration-300",
+              showCameraPlayer ? "aspect-[3/4] md:aspect-square h-[60vh] md:h-auto" : "aspect-square"
+            )}>
               {showCameraPlayer ? (
-                <CameraKitPlayer
-                  ref={playerRef}
-                  key={`${producto.id}-hero-${cameraFacing}`}
-                  apiToken={cameraToken}
-                  lensId={lensId}
-                  lensGroupId={lensGroupId}
-                  cameraFacing={cameraFacing}
-                  onError={handlePlayerError}
-                  className="h-full w-full"
-                />
+                <>
+                  <CameraKitPlayer
+                    ref={playerRef}
+                    key={`${producto.id}-hero-${cameraFacing}`}
+                    apiToken={cameraToken}
+                    lensId={lensId}
+                    lensGroupId={lensGroupId}
+                    cameraFacing={cameraFacing}
+                    onError={handlePlayerError}
+                    className="h-full w-full"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={handleCapture}
+                    className="absolute bottom-4 right-4 h-12 w-12 rounded-full shadow-lg bg-white/20 backdrop-blur-md border-white/30 hover:bg-white/40 text-white z-10"
+                  >
+                    <Save className="h-6 w-6" />
+                  </Button>
+                </>
               ) : (
                 <Image
                   src={producto.metadata?.image_url || "/placeholder.svg"}
@@ -671,107 +685,115 @@ export default function ProductoDetallePage() {
               <p className="text-3xl font-bold text-foreground mb-6">{formatCurrency(producto.valor_unitario)}</p>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-8">
-              {hasLens ? (
-                <Button
-                  type="button"
-                  className={cn("flex-1 min-w-[200px]", userRole === "admin" ? "" : "w-full")}
-                  onClick={arActive ? handleStopAr : handleStartAr}
-                  disabled={!canActivateAr || analyzing}
-                >
-                  <Eye className="mr-2 h-5 w-5" />
-                  {arActive ? "Cerrar AR" : "Probar con AR"}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  className="flex-1 min-w-[200px] bg-muted text-muted-foreground"
-                  disabled
-                >
-                  <Eye className="mr-2 h-5 w-5" />
-                  AR no disponible
-                </Button>
-              )}
+            <div className="space-y-3 mb-8">
+              <div className="grid grid-cols-2 gap-3">
+                {hasLens ? (
+                  <Button
+                    type="button"
+                    className={cn(
+                      "w-full shadow-sm transition-all",
+                      arActive ? "bg-zinc-800 hover:bg-zinc-900 text-white" : ""
+                    )}
+                    onClick={arActive ? handleStopAr : handleStartAr}
+                    disabled={!canActivateAr || analyzing}
+                  >
+                    {arActive ? <X className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    {arActive ? "Cerrar" : "Probar AR"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full bg-muted text-muted-foreground opacity-50"
+                    disabled
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    No AR
+                  </Button>
+                )}
+
+                <div className="w-full">
+                  <GeminiTryOnDialog 
+                    productImage={producto.metadata?.image_url || "/placeholder.svg"} 
+                    productName={producto.nombre}
+                    className="w-full shadow-sm"
+                  />
+                </div>
+              </div>
 
               {arActive && (
                 <Button
                   type="button"
-                  variant="secondary"
-                  onClick={handleCapture}
-                  className="flex-1 min-w-[200px]"
-                >
-                  <Save className="mr-2 h-5 w-5" />
-                  Guardar Foto
-                </Button>
-              )}
-
-              {arActive && (
-                <Button
-                  type="button"
-                  className="flex-1 min-w-[200px] bg-cyan-600 hover:bg-cyan-700 text-white"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm animate-in fade-in slide-in-from-top-2"
                   onClick={handleAnalyze}
                   disabled={analyzing}
                 >
                   {analyzing ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Wand2 className="mr-2 h-5 w-5" />
+                    <Wand2 className="mr-2 h-4 w-4" />
                   )}
                   {analyzing ? "Analizando..." : "Analizar Look con IA"}
                 </Button>
               )}
 
-              {userRole && (
+              <div className="flex items-center justify-between gap-1 p-1 bg-muted/40 rounded-lg border border-border/50">
+                {userRole && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-9 px-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => setMeasurementsOpen(true)}
+                  >
+                    <Ruler className="mr-2 h-3.5 w-3.5" />
+                    Medidas
+                  </Button>
+                )}
+                
+                {userRole && <div className="w-px h-4 bg-border/50" />}
+
                 <Button
                   type="button"
-                  variant="outline"
-                  className="flex-1 min-w-[160px]"
-                  onClick={() => setMeasurementsOpen(true)}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "flex-1 h-9 px-2 text-xs sm:text-sm",
+                    isFavorited ? "text-red-500 hover:text-red-600 hover:bg-red-50" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  disabled={favoriteLoading || analyzing}
+                  onClick={handleFavorite}
                 >
-                  <Ruler className="mr-2 h-5 w-5" />
-                  Mis Medidas
+                  {favoriteLoading ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Heart className={cn("mr-2 h-3.5 w-3.5", isFavorited && "fill-current")} />
+                  )}
+                  {isFavorited ? "Guardado" : "Guardar"}
                 </Button>
-              )}
 
-              <GeminiTryOnDialog 
-                productImage={producto.metadata?.image_url || "/placeholder.svg"} 
-                productName={producto.nombre} 
-              />
+                <div className="w-px h-4 bg-border/50" />
 
-              <Button
-                type="button"
-                variant={isFavorited ? "secondary" : "outline"}
-                className="flex-1 min-w-[160px]"
-                disabled={favoriteLoading || analyzing}
-                onClick={handleFavorite}
-              >
-                {favoriteLoading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Heart className="mr-2 h-5 w-5" fill={isFavorited ? "currentColor" : "none"} />
-                )}
-                {isFavorited ? "En favoritos" : "Guardar"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 min-w-[160px]"
-                disabled={shareLoading}
-                onClick={handleShare}
-              >
-                {shareLoading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Share2 className="mr-2 h-5 w-5" />
-                )}
-                Compartir
-              </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-9 px-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                  disabled={shareLoading}
+                  onClick={handleShare}
+                >
+                  {shareLoading ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Share2 className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Compartir
+                </Button>
+              </div>
 
               {userRole === "admin" && (
-                <Button variant="outline" asChild className="flex-1 min-w-[160px]">
+                <Button variant="outline" size="sm" asChild className="w-full h-8 text-xs border-dashed text-muted-foreground">
                   <Link href={`/inventario?edit=${producto.id}`}>
-                    <Edit className="mr-2 h-5 w-5" />Editar
+                    <Edit className="mr-2 h-3.5 w-3.5" />Editar Producto
                   </Link>
                 </Button>
               )}
@@ -880,30 +902,35 @@ export default function ProductoDetallePage() {
                   <span className="font-medium text-sm">{recommendations.colorimetry.season}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">{recommendations.colorimetry.description}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  {recommendations.colorimetry.bestColor ? (
-                    <>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {recommendations.colorimetry.bestColors && Array.isArray(recommendations.colorimetry.bestColors) ? (
+                    recommendations.colorimetry.bestColors.map((color: any, i: number) => {
+                      if (typeof color === 'string') {
+                         return (
+                            <Badge key={i} variant="secondary" className="text-xs bg-background/80">
+                              {color}
+                            </Badge>
+                         )
+                      }
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <div 
+                            className="w-6 h-6 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
+                            style={{ backgroundColor: color.hex || '#ccc' }}
+                          />
+                          <span className="text-sm font-medium">{color.name}</span>
+                        </div>
+                      )
+                    })
+                  ) : recommendations.colorimetry.bestColor ? (
+                    <div className="flex items-center gap-2">
                       <div 
-                        className="w-8 h-8 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
+                        className="w-6 h-6 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
                         style={{ backgroundColor: recommendations.colorimetry.bestColor.hex }}
                       />
-                      <span className="font-medium text-sm">
-                        {recommendations.colorimetry.bestColor.name}
-                      </span>
-                    </>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {recommendations.colorimetry.bestColors?.map((color: string, i: number) => (
-                        <Badge 
-                          key={i} 
-                          variant="secondary" 
-                          className="text-xs bg-background/80"
-                        >
-                          {color}
-                        </Badge>
-                      ))}
+                      <span className="text-sm font-medium">{recommendations.colorimetry.bestColor.name}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}
