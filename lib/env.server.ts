@@ -51,12 +51,24 @@ const resolveSiteUrl = () => {
 }
 
 export const serverEnv = {
-  nodeEnv: optionalEnv("NODE_ENV") ?? "development",
-  supabaseUrl: resolveSupabaseUrl(),
-  supabaseServiceKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
-  supabaseAnonKey: resolveSupabaseAnonKey(),
-  jwtSecret: requiredEnv("JWT_SECRET"),
-  siteUrl: resolveSiteUrl(),
+  get nodeEnv() {
+    return optionalEnv("NODE_ENV") ?? "development"
+  },
+  get supabaseUrl() {
+    return resolveSupabaseUrl()
+  },
+  get supabaseServiceKey() {
+    return requiredEnv("SUPABASE_SERVICE_ROLE_KEY")
+  },
+  get supabaseAnonKey() {
+    return resolveSupabaseAnonKey()
+  },
+  get jwtSecret() {
+    return requiredEnv("JWT_SECRET")
+  },
+  get siteUrl() {
+    return resolveSiteUrl()
+  },
 }
 
 export const isProduction = serverEnv.nodeEnv === "production"
