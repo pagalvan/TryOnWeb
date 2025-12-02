@@ -5,16 +5,37 @@ import { Package, ArrowLeft, ShoppingBag } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getCategory, type Category } from "@/lib/services/categories"
-import { listProducts, type InventoryProduct } from "@/lib/services/inventory"
+import { getSupabaseAdminClient } from "@/lib/supabase/server"
 import { CATEGORY_ICON_MAP, type IconValue } from "@/components/categories/types"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+
+type Category = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  estado: "activa" | "inactiva"
+  icon: string | null
+  productCount: number
+}
+
+type Product = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  sku: string | null
+  valor_unitario: number | null
+  estado: string
+  inventario_items: Array<{ cantidad: number | null }>
+}
 
 const formatCurrency = (value: number | null) => {
   if (value === null || value === undefined) return "—"
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value)
 }
 
-const getTotalStock = (items: InventoryProduct["inventario_items"]) =>
+const getTotalStock = (items: Product["inventario_items"]) =>
   items.reduce((total, item) => total + (item.cantidad ?? 0), 0)
 
 type PageParams = {
@@ -23,20 +44,59 @@ type PageParams = {
 
 export default async function CategoriaDetallePage({ params }: PageParams) {
   const { id } = await params
+  const supabase = getSupabaseAdminClient()
 
-  let category: Category | null = null
-  let products: InventoryProduct[] = []
+  // Fetch category directly from Supabase
+  const { data: categoryData, error: categoryError } = await supabase
+    .from("categorias")
+    .select(`
+      id,
+      nombre,
+      descripcion,
+      estado,
+      icon,
+      prendas:prendas ( id )
+    `)
+    .eq("id", id)
+    .maybeSingle()
 
-  try {
-    category = await getCategory(id)
-    if (!category) {
-      return notFound()
-    }
-    products = await listProducts({ categoryId: id })
-  } catch (error) {
-    console.error("No se pudo cargar la categoría", error)
+  if (categoryError || !categoryData) {
+    console.error("No se pudo cargar la categoría", categoryError)
     return notFound()
   }
+
+  const category: Category = {
+    id: categoryData.id,
+    nombre: categoryData.nombre,
+    descripcion: categoryData.descripcion,
+    estado: categoryData.estado,
+    icon: categoryData.icon,
+    productCount: Array.isArray(categoryData.prendas) ? categoryData.prendas.length : 0,
+  }
+
+  // Fetch products for this category
+  const { data: productsData, error: productsError } = await supabase
+    .from("prendas")
+    .select(`
+      id, nombre, descripcion, sku, valor_unitario, estado,
+      inventario_items ( cantidad )
+    `)
+    .eq("categoria_id", id)
+    .order("nombre")
+
+  if (productsError) {
+    console.error("No se pudieron cargar los productos", productsError)
+  }
+
+  const products: Product[] = (productsData ?? []).map((p: any) => ({
+    id: p.id,
+    nombre: p.nombre,
+    descripcion: p.descripcion,
+    sku: p.sku,
+    valor_unitario: p.valor_unitario,
+    estado: p.estado,
+    inventario_items: p.inventario_items ?? [],
+  }))
 
   const IconComponent = category.icon
     ? CATEGORY_ICON_MAP[category.icon as IconValue]
