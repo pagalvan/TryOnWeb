@@ -109,6 +109,13 @@ function LoginForm() {
       })
 
       setResetMessage("Enviamos un correo con instrucciones para restablecerla.")
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "No pudimos enviar el correo"
+      if (msg.toLowerCase().includes("rate limit")) {
+        setResetMessage("Ya enviamos un correo recientemente. Espera unos minutos antes de intentar de nuevo.")
+      } else {
+        setResetMessage(msg)
+      }
     } finally {
       setResetLoading(false)
     }
