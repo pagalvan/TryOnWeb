@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
-import { getAuthenticatedUser } from "@/lib/auth/session"
+import { ensureAdmin } from "@/lib/auth/session"
 import { getSupabaseAdminClient } from "@/lib/supabase/server"
 
 export async function POST(request: Request) {
-  const user = await getAuthenticatedUser()
+  const { user, response } = await ensureAdmin()
   if (!user) {
-    return NextResponse.json({ message: "No autorizado" }, { status: 401 })
+    return response || NextResponse.json({ message: "No autorizado" }, { status: 401 })
   }
 
   try {
@@ -16,7 +16,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "No se proporcionó ningún archivo" }, { status: 400 })
     }
 
-    const fileExt = file.name.split('.').pop()
+    // Validate file type to prevent malicious uploads (XSS/Malware)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ message: "Tipo de archivo no permitido" }, { status: 400 })
+    }
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase()
+    const allowedExts = ['jpg', 'jpeg', 'png', 'webp']
+    if (!fileExt || !allowedExts.includes(fileExt)) {
+      return NextResponse.json({ message: "Extensión de archivo no permitida" }, { status: 400 })
+    }
+
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
     const filePath = `${fileName}`
 
