@@ -1,4 +1,4 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { isProduction } from "@/lib/env.server"
@@ -30,7 +30,16 @@ export const clearSessionCookie = (response: NextResponse) => {
 
 export const getAuthenticatedUser = async (): Promise<AuthenticatedUser | null> => {
   const store = await cookies()
-  const sessionToken = store.get(SESSION_COOKIE_NAME)?.value
+  let sessionToken = store.get(SESSION_COOKIE_NAME)?.value
+
+  if (!sessionToken) {
+    const headersList = await headers()
+    const authorization = headersList.get("authorization")
+    if (authorization?.startsWith("Bearer ")) {
+      sessionToken = authorization.substring(7)
+    }
+  }
+
   if (!sessionToken) {
     return null
   }
