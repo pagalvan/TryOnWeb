@@ -60,7 +60,7 @@ export function TargetGauge({ value }: TargetGaugeProps) {
         </defs>
       </svg>
       <div className="-mt-6 flex flex-col items-center">
-        <p className="text-3xl font-semibold text-slate-900">{progress.toFixed(2)}%</p>
+        <p className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{progress.toFixed(2)}%</p>
         <span className="mt-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">+{(progress / 5).toFixed(2)}%</span>
       </div>
     </div>

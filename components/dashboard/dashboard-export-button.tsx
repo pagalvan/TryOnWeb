@@ -114,7 +114,7 @@ export function DashboardExportButton({ targetSelector, exportData, fileName = "
       {exportContent ? (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center bg-transparent">
           <div
-            className={`rounded-[24px] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] transition-opacity duration-75 ${isSheetVisible ? "opacity-100" : "opacity-0"}`}
+            className={`rounded-[24px] bg-white dark:bg-slate-900 shadow-[0_30px_80px_rgba(15,23,42,0.18)] transition-opacity duration-75 ${isSheetVisible ? "opacity-100" : "opacity-0"}`}
           >
             <div aria-hidden ref={sheetRef} className="select-none">
               {exportContent}

@@ -20,7 +20,7 @@ export function DashboardSectionNav({ items, activeSection }: DashboardSectionNa
           const matchesPath = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}`))
           const isActive = item.id === activeSection || matchesPath
           const baseClasses = "rounded-full border px-4 py-1.5 transition"
-          const inactiveClasses = "border-slate-200 bg-white/90 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+          const inactiveClasses = "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:border-slate-700 hover:text-slate-900 dark:text-slate-50"
           const activeClasses = "border-slate-900 bg-slate-900 text-white shadow"
 
           return (

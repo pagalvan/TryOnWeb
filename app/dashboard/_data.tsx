@@ -254,7 +254,7 @@ export const loadDashboardContext = async (
     throw error
   })
 
-  const panelClass = "rounded-3xl border border-slate-100/70 bg-white/80 shadow-[0_25px_60px_-12px_rgba(15,23,42,0.18)] backdrop-blur-sm"
+  const panelClass = "rounded-3xl border border-slate-100 dark:border-slate-800/70 bg-white dark:bg-slate-900/80 shadow-[0_25px_60px_-12px_rgba(15,23,42,0.18)] backdrop-blur-sm"
   const hasInventoryFlow = overview.inventoryFlow.length > 0
   const hasTryOnTrend = overview.tryOn.trend.length > 0
   const hasDemandTrend = overview.demandTrend.length > 0

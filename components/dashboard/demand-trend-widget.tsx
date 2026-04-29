@@ -84,7 +84,7 @@ export function DemandTrendWidget({ data }: DemandTrendWidgetProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex justify-end">
-        <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-medium text-slate-600 shadow-inner">
+        <div className="flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 p-1 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-inner">
           {OPTIONS.map((option) => (
             <Button
               key={option.value}
@@ -92,8 +92,8 @@ export function DemandTrendWidget({ data }: DemandTrendWidgetProps) {
               variant={timeframe === option.value ? 'default' : 'ghost'}
               className={
                 timeframe === option.value
-                  ? 'rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-900 shadow-sm'
-                  : 'rounded-full px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-900'
+                  ? 'rounded-full bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 dark:text-slate-50 shadow-sm'
+                  : 'rounded-full px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-50'
               }
               onClick={() => setTimeframe(option.value)}
             >
@@ -103,7 +103,7 @@ export function DemandTrendWidget({ data }: DemandTrendWidgetProps) {
         </div>
       </div>
       {noData ? (
-        <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-sm text-muted-foreground">
+        <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-sm text-muted-foreground">
           No hay datos suficientes para mostrar el comportamiento en este periodo.
         </div>
       ) : (

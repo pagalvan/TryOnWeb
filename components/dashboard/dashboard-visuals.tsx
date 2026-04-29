@@ -66,12 +66,12 @@ export function DashboardVisuals({
         >
           <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-none p-6 pb-3">
             <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Panorama de interacción</CardTitle>
-              <CardDescription className="text-sm text-slate-600">
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">Panorama de interacción</CardTitle>
+              <CardDescription className="text-sm text-slate-600 dark:text-slate-300">
                 Evolución mensual de vistas y try-ons del catálogo principal.
               </CardDescription>
             </div>
-            <Badge variant="outline" className="rounded-full border-transparent bg-white/80 text-slate-600 shadow-sm">
+            <Badge variant="outline" className="rounded-full border-transparent bg-white dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 shadow-sm">
               Últimos 12 meses
             </Badge>
           </CardHeader>
@@ -105,10 +105,10 @@ export function DashboardVisuals({
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {heroMetrics.map((metric) => (
-                <div key={metric.id} className="flex items-center justify-between rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-sm">
+                <div key={metric.id} className="flex items-center justify-between rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/80 px-4 py-3 shadow-sm">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{metric.label}</p>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900">{formatNumber(metric.value)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400 dark:text-slate-400">{metric.label}</p>
+                    <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-50">{formatNumber(metric.value)}</p>
                   </div>
                   <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${metric.accent} text-white text-sm font-semibold`}>
                     {metric.id === "users" ? "UA" : metric.id === "events" ? "EV" : metric.id === "sessions" ? "SE" : "NU"}
@@ -122,10 +122,10 @@ export function DashboardVisuals({
         <Card className={`${panelClass} xl:col-span-4`} style={{ background: "linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%)" }}>
           <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-none p-6 pb-3">
             <div>
-              <CardTitle className="text-lg font-semibold text-slate-900">Usuarios activos</CardTitle>
-              <CardDescription className="text-sm text-slate-600">Actividad reciente por minuto.</CardDescription>
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">Usuarios activos</CardTitle>
+              <CardDescription className="text-sm text-slate-600 dark:text-slate-300">Actividad reciente por minuto.</CardDescription>
             </div>
-            <span className="text-3xl font-semibold text-slate-900">{formatNumber(totalViews || tryOnSummary.sessions)}</span>
+            <span className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{formatNumber(totalViews || tryOnSummary.sessions)}</span>
           </CardHeader>
           <CardContent className="space-y-5 px-6 pb-6">
             <ChartContainer className="h-[140px]" config={{ pulse: { label: "Actividad", color: "#a855f7" } }}>
@@ -138,8 +138,8 @@ export function DashboardVisuals({
               </BarChart>
             </ChartContainer>
 
-            <div className="rounded-2xl border border-white/70 bg-white/80 p-4 text-sm text-slate-600">
-              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+            <div className="rounded-2xl border border-white/70 dark:border-slate-700/70 bg-white dark:bg-slate-900/80 p-4 text-sm text-slate-600 dark:text-slate-300">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
                 <span>Fuente</span>
                 <span>Usuarios</span>
               </div>
@@ -159,7 +159,7 @@ export function DashboardVisuals({
                         <span className="h-2 w-2 rounded-full bg-current" />
                         {entry.label}
                       </span>
-                      <span className="text-sm font-semibold text-slate-900">{formatNumber(entry.value)}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">{formatNumber(entry.value)}</span>
                     </div>
                   )
                 })}

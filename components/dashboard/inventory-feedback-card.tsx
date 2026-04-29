@@ -40,10 +40,10 @@ export function InventoryFeedbackCard({ panelClass, data, total }: InventoryFeed
     >
       <CardHeader className="flex items-center justify-between border-none p-6 pb-3">
         <div>
-          <CardTitle className="text-lg font-semibold text-slate-900">Feedback inventario</CardTitle>
-          <CardDescription className="text-sm text-slate-600">Estado global de existencias por criticidad.</CardDescription>
+          <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">Feedback inventario</CardTitle>
+          <CardDescription className="text-sm text-slate-600 dark:text-slate-300">Estado global de existencias por criticidad.</CardDescription>
         </div>
-        <span className="text-xs font-semibold text-slate-500">{formatNumber(effectiveTotal)} ítems</span>
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{formatNumber(effectiveTotal)} ítems</span>
       </CardHeader>
       <CardContent className="px-6 pb-6">
         <ChartContainer
@@ -76,18 +76,18 @@ export function InventoryFeedbackCard({ panelClass, data, total }: InventoryFeed
           {effectiveData.map((entry) => {
             const percentage = effectiveTotal > 0 ? Math.round((entry.value / effectiveTotal) * 100) : 0
             return (
-              <div key={entry.key} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-slate-600">
+              <div key={entry.key} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-slate-600 dark:text-slate-300">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `var(--color-${entry.key})` }} />
                   {entry.name}
                 </span>
-                <span className="font-semibold text-slate-900">{percentage}%</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-50">{percentage}%</span>
               </div>
             )
           })}
         </div>
         {!hasData ? (
-          <p className="mt-3 text-xs text-slate-500">Mostramos una distribución de referencia hasta recibir inventario actualizado.</p>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Mostramos una distribución de referencia hasta recibir inventario actualizado.</p>
         ) : null}
       </CardContent>
     </Card>

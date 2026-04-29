@@ -117,23 +117,23 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
   const topProductPeak = Math.max(...topProducts.map((product) => product.totalInteractions), 1)
 
   return (
-    <div className="w-[1200px] bg-[#f5f7ff] p-10 text-slate-900">
-      <div className="space-y-3 border-b border-slate-200 pb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">{subtitle}</p>
+    <div className="w-[1200px] bg-[#f5f7ff] p-10 text-slate-900 dark:text-slate-50">
+      <div className="space-y-3 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400 dark:text-slate-400">{subtitle}</p>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900">{title}</h1>
-            <p className="text-sm text-slate-500">{periodLabel}</p>
+            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{title}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{periodLabel}</p>
           </div>
-          <div className="text-right text-xs text-slate-500">
-            <p className="font-semibold text-slate-600">Actualizado</p>
+          <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+            <p className="font-semibold text-slate-600 dark:text-slate-300">Actualizado</p>
             <p>{generatedLabel}</p>
           </div>
         </div>
         {badges.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {badges.map((badge) => (
-              <span key={badge} className="rounded-full border border-slate-200 bg-slate-50 px-4 py-1 text-xs font-medium text-slate-600">
+              <span key={badge} className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-4 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                 {badge}
               </span>
             ))}
@@ -143,22 +143,22 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
 
       <section className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
-          <div key={card.id} className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)] backdrop-blur">
-            <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+          <div key={card.id} className="rounded-3xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/80 p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400">
               <span>{card.periodLabel ?? "Mes en curso"}</span>
-              {card.source ? <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] tracking-[0.2em] text-slate-500">{card.source}</span> : null}
+              {card.source ? <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-1 text-[10px] tracking-[0.2em] text-slate-500 dark:text-slate-400">{card.source}</span> : null}
             </div>
             <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="text-3xl font-semibold text-slate-900">{card.value}</p>
+              <p className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{card.value}</p>
               {card.delta ? (
                 <span className={`text-sm font-semibold ${card.deltaTrend === "down" ? "text-rose-500" : "text-emerald-600"}`}>
                   {card.delta}
                 </span>
               ) : null}
             </div>
-            {card.helper ? <p className="text-xs text-slate-500">{card.helper}</p> : null}
+            {card.helper ? <p className="text-xs text-slate-500 dark:text-slate-400">{card.helper}</p> : null}
             {typeof card.progress === "number" ? (
-              <div className="mt-4 h-2 rounded-full bg-slate-100">
+              <div className="mt-4 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
                   className={`h-full rounded-full ${card.deltaTrend === "down" ? "bg-rose-400" : "bg-indigo-500"}`}
                   style={{ width: `${Math.max(0, Math.min(100, card.progress))}%` }}
@@ -229,7 +229,7 @@ export function DashboardExportSheet({ data }: DashboardExportSheetProps) {
         <ReportsCard reports={reports} />
       </section>
 
-      {notes ? <div className="mt-6 text-xs text-slate-500">{notes}</div> : null}
+      {notes ? <div className="mt-6 text-xs text-slate-500 dark:text-slate-400">{notes}</div> : null}
     </div>
   )
 }
@@ -248,25 +248,25 @@ function AudienceCard({ title, subtitle, badge, series }: AudienceCardProps) {
   const tryons = latest ? formatter.format(Math.round(latest.secondary)) : "0"
 
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#ddeafe] to-[#c7dfff] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#ddeafe] to-[#c7dfff] p-6 shadow-xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <p className="text-xs text-slate-600">{subtitle}</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{title}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">{subtitle}</p>
         </div>
-        {badge ? <span className="rounded-full bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]">{badge}</span> : null}
+        {badge ? <span className="rounded-full bg-white dark:bg-slate-900/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]">{badge}</span> : null}
       </div>
-      <div className="mt-6 grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
-        <div className="rounded-2xl bg-white/60 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Views</p>
-          <p className="text-2xl font-semibold text-slate-900">{views}</p>
+      <div className="mt-6 grid gap-4 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+        <div className="rounded-2xl bg-white dark:bg-slate-900/60 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Views</p>
+          <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{views}</p>
         </div>
-        <div className="rounded-2xl bg-white/60 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Try-ons</p>
-          <p className="text-2xl font-semibold text-slate-900">{tryons}</p>
+        <div className="rounded-2xl bg-white dark:bg-slate-900/60 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Try-ons</p>
+          <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{tryons}</p>
         </div>
       </div>
-      <div className="mt-4 rounded-3xl border border-white/60 bg-white/60 p-4">
+      <div className="mt-4 rounded-3xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/60 p-4">
         <DualLineChart
           points={series.map((point) => ({ label: point.label, primary: point.primary, secondary: point.secondary }))}
           primaryLabel="Views"
@@ -289,13 +289,13 @@ type FeedbackCardProps = {
 function FeedbackCard({ title, subtitle, statuses, total }: FeedbackCardProps) {
   const palette = ["#7c3aed", "#f97316", "#ef4444"]
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#fee2fe] to-[#ffd6ec] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#fee2fe] to-[#ffd6ec] p-6 shadow-xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <p className="text-xs text-slate-600">{subtitle}</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{title}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">{subtitle}</p>
         </div>
-        <span className="text-xs text-slate-500">{total} items</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{total} items</span>
       </div>
       <div className="mt-5 flex items-center gap-6">
         <DonutChart values={statuses.map((status) => status.value)} colors={palette} />
@@ -304,11 +304,11 @@ function FeedbackCard({ title, subtitle, statuses, total }: FeedbackCardProps) {
             const share = total > 0 ? Math.round((status.value / total) * 100) : 0
             return (
               <div key={status.label} className="flex items-center justify-between gap-4">
-                <span className="inline-flex items-center gap-2 text-slate-600">
+                <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: palette[index % palette.length] }} />
                   {status.label}
                 </span>
-                <span className="text-sm font-semibold text-slate-900">{share}%</span>
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">{share}%</span>
               </div>
             )
           })}
@@ -325,24 +325,24 @@ type ChannelCardProps = {
 
 function ChannelCard({ traffic, total }: ChannelCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#fef6dc] to-[#fdeab1] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#fef6dc] to-[#fdeab1] p-6 shadow-xl">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Visitas por canal</p>
-          <p className="text-xs text-slate-600">Desglose semanal por fuente de tráfico.</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Visitas por canal</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">Desglose semanal por fuente de tráfico.</p>
         </div>
-        <span className="rounded-full bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]">Semana</span>
+        <span className="rounded-full bg-white dark:bg-slate-900/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em]">Semana</span>
       </div>
       <div className="mt-5 space-y-3">
         {traffic.map((item) => {
           const share = total > 0 ? Math.round((item.count / total) * 100) : 0
           return (
             <div key={item.label} className="space-y-1">
-              <div className="flex items-center justify-between text-sm text-slate-600">
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
                 <span>{item.label}</span>
-                <span className="font-semibold text-slate-900">{item.value}</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-50">{item.value}</span>
               </div>
-              <div className="h-2 rounded-full bg-white/70">
+              <div className="h-2 rounded-full bg-white dark:bg-slate-900/70">
                 <div className="h-2 rounded-full bg-amber-400" style={{ width: `${Math.min(share, 100)}%` }} />
               </div>
             </div>
@@ -363,13 +363,13 @@ type LargeChartCardProps = {
 
 function LargeChartCard({ title, description, primaryLabel, secondaryLabel, points }: LargeChartCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/60 bg-gradient-to-b from-[#f6e8ff] to-[#f2ddff] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/60 dark:border-slate-700/60 bg-gradient-to-b from-[#f6e8ff] to-[#f2ddff] p-6 shadow-xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-lg font-semibold text-slate-900">{title}</p>
-          <p className="text-sm text-slate-600">{description}</p>
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">{title}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{description}</p>
         </div>
-        <div className="flex flex-col gap-1 text-xs text-slate-600">
+        <div className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             {primaryLabel}
@@ -380,7 +380,7 @@ function LargeChartCard({ title, description, primaryLabel, secondaryLabel, poin
           </span>
         </div>
       </div>
-      <div className="mt-6 rounded-3xl border border-white/60 bg-white/50 p-4">
+      <div className="mt-6 rounded-3xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/50 p-4">
         <DualLineChart
           points={points.map((point) => ({ label: point.label, primary: point.primary, secondary: point.secondary }))}
           primaryLabel={primaryLabel}
@@ -401,22 +401,22 @@ type TryOnCardProps = {
 
 function TryOnCard({ conversionLabel, series, quickStats }: TryOnCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#dceafe] to-[#c7daf9] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#dceafe] to-[#c7daf9] p-6 shadow-xl">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-lg font-semibold text-slate-900">Probador virtual</p>
-          <p className="text-sm text-slate-600">Conversión acumulada del periodo.</p>
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Probador virtual</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Conversión acumulada del periodo.</p>
         </div>
-        <span className="text-sm font-semibold text-slate-900">{conversionLabel} conversión</span>
+        <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">{conversionLabel} conversión</span>
       </div>
-      <div className="mt-4 rounded-3xl border border-white/60 bg-white/50 p-4">
+      <div className="mt-4 rounded-3xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/50 p-4">
         <SingleLineChart series={series} accent="#2563eb" />
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {quickStats.map((stat) => (
-          <div key={stat.id} className="rounded-2xl border border-white/60 bg-white/60 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{stat.label}</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">{stat.value}</p>
+          <div key={stat.id} className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/60 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">{stat.label}</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">{stat.value}</p>
           </div>
         ))}
       </div>
@@ -432,13 +432,13 @@ type TopProductsCardProps = {
 function TopProductsCard({ products, peak }: TopProductsCardProps) {
   const formatter = new Intl.NumberFormat("es-CO")
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#fff3d7] to-[#ffe4ad] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#fff3d7] to-[#ffe4ad] p-6 shadow-xl">
       <div className="mb-4">
-        <p className="text-lg font-semibold text-slate-900">Top productos destacados</p>
-        <p className="text-sm text-slate-600">Ranking por interacción total en el probador virtual.</p>
+        <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Top productos destacados</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Ranking por interacción total en el probador virtual.</p>
       </div>
       {products.length === 0 ? (
-        <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 text-sm text-slate-500">
+        <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-sm text-slate-500 dark:text-slate-400">
           No hay productos con interacción en este periodo.
         </div>
       ) : (
@@ -446,18 +446,18 @@ function TopProductsCard({ products, peak }: TopProductsCardProps) {
           {products.map((product, index) => {
             const progress = peak > 0 ? Math.round((product.totalInteractions / peak) * 100) : 0
             return (
-              <div key={product.label} className="rounded-2xl border border-white/60 bg-white/70 p-4">
-                <div className="flex items-center justify-between text-sm text-slate-600">
-                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">#{index + 1}</span>
-                  <span className="text-xs text-slate-500">{formatter.format(product.totalInteractions)} interacciones</span>
+              <div key={product.label} className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/70 p-4">
+                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400">#{index + 1}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{formatter.format(product.totalInteractions)} interacciones</span>
                 </div>
-                <p className="mt-2 font-semibold text-slate-900">{product.label}</p>
-                <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
+                <p className="mt-2 font-semibold text-slate-900 dark:text-slate-50">{product.label}</p>
+                <div className="mt-3 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
                   <span>Try-on {product.tryons}</span>
                   <span>Favoritos {product.favorites}</span>
                   <span>Compartidos {product.shares}</span>
                 </div>
-                <div className="mt-3 h-2 rounded-full bg-slate-100">
+                <div className="mt-3 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                   <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${Math.min(progress, 100)}%` }} />
                 </div>
               </div>
@@ -479,47 +479,47 @@ type InventoryInsightsCardProps = {
 
 function InventoryInsightsCard({ healthPercent, categoryBreakdown, categoryTotal, traffic, trafficTotal }: InventoryInsightsCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#dcfce7] to-[#bbf7d0] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#dcfce7] to-[#bbf7d0] p-6 shadow-xl">
       <div className="mb-4">
-        <p className="text-lg font-semibold text-slate-900">Insights de inventario</p>
-        <p className="text-sm text-slate-600">Salud del stock, categorías activas y tráfico del catálogo.</p>
+        <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Insights de inventario</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Salud del stock, categorías activas y tráfico del catálogo.</p>
       </div>
-      <div className="rounded-2xl bg-white/70 p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Salud del inventario</p>
+      <div className="rounded-2xl bg-white dark:bg-slate-900/70 p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Salud del inventario</p>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-3xl font-semibold text-slate-900">{healthPercent.toFixed(0)}%</span>
-          <span className="text-xs text-slate-500">Cumplimiento objetivo</span>
+          <span className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{healthPercent.toFixed(0)}%</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Cumplimiento objetivo</span>
         </div>
-        <div className="mt-3 h-2 rounded-full bg-slate-100">
+        <div className="mt-3 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
           <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.max(0, Math.min(healthPercent, 100))}%` }} />
         </div>
       </div>
       <div className="mt-5 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categorías destacadas</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Categorías destacadas</p>
         {categoryBreakdown.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/50 p-6 text-sm text-slate-500">
+          <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-6 text-sm text-slate-500 dark:text-slate-400">
             No hay categorías con stock disponible en este filtro.
           </div>
         ) : (
           categoryBreakdown.map((category) => {
             const share = categoryTotal > 0 ? Math.round((category.value / categoryTotal) * 100) : 0
             return (
-              <div key={category.label} className="flex items-center justify-between text-sm text-slate-600">
+              <div key={category.label} className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
                 <span>{category.label}</span>
-                <span className="font-semibold text-slate-900">{share}%</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-50">{share}%</span>
               </div>
             )
           })
         )}
       </div>
       <div className="mt-5 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tráfico del catálogo</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Tráfico del catálogo</p>
         {traffic.map((item) => {
           const share = trafficTotal > 0 ? Math.round((item.count / trafficTotal) * 100) : 0
           return (
-            <div key={item.label} className="flex items-center justify-between text-sm text-slate-600">
+            <div key={item.label} className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
               <span>{item.label}</span>
-              <span className="font-semibold text-slate-900">{item.value} · {share}%</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-50">{item.value} · {share}%</span>
             </div>
           )
         })}
@@ -535,47 +535,47 @@ type StockAlertsCardProps = {
 
 function StockAlertsCard({ highlight, lowStock }: StockAlertsCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#fce7f3] to-[#fbcfe8] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#fce7f3] to-[#fbcfe8] p-6 shadow-xl">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-lg font-semibold text-slate-900">Alertas de stock</p>
-          <p className="text-sm text-slate-600">Productos con criticidad alta detectados.</p>
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Alertas de stock</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Productos con criticidad alta detectados.</p>
         </div>
-        <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-rose-500">Crítico</span>
+        <span className="rounded-full bg-white dark:bg-slate-900/70 px-3 py-1 text-xs font-semibold text-rose-500">Crítico</span>
       </div>
       {highlight ? (
-        <div className="mt-4 rounded-3xl border border-rose-100 bg-white/80 p-4">
+        <div className="mt-4 rounded-3xl border border-rose-100 bg-white dark:bg-slate-900/80 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-slate-900">{highlight.product}</p>
-              <p className="text-xs text-slate-500">SKU: {highlight.sku ?? "Sin SKU"}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{highlight.product}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">SKU: {highlight.sku ?? "Sin SKU"}</p>
             </div>
             <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-600">{highlight.status}</span>
           </div>
-          <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-3">
+          <div className="mt-3 grid gap-3 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">{highlight.stock}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{highlight.stock}</p>
               <p>Stock actual</p>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">{highlight.minimum}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{highlight.minimum}</p>
               <p>Mínimo requerido</p>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">{highlight.location ?? "Sin ubicación"}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{highlight.location ?? "Sin ubicación"}</p>
               <p>Ubicación</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="mt-4 rounded-3xl border border-dashed border-rose-200 bg-white/60 p-6 text-sm text-slate-500">
+        <div className="mt-4 rounded-3xl border border-dashed border-rose-200 bg-white dark:bg-slate-900/60 p-6 text-sm text-slate-500 dark:text-slate-400">
           No hay alertas activas para los filtros actuales.
         </div>
       )}
       <div className="mt-5 space-y-2 text-sm">
         {lowStock.slice(0, 3).map((item) => (
-          <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/60 bg-white/50 px-4 py-2">
-            <span className="text-slate-600">{item.label}</span>
+          <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/50 px-4 py-2">
+            <span className="text-slate-600 dark:text-slate-300">{item.label}</span>
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-500">{item.status}</span>
           </div>
         ))}
@@ -590,22 +590,22 @@ type MovementsCardProps = {
 
 function MovementsCard({ movements }: MovementsCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#e0f2fe] to-[#c7e0fb] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#e0f2fe] to-[#c7e0fb] p-6 shadow-xl">
       <div className="mb-4">
-        <p className="text-lg font-semibold text-slate-900">Movimientos recientes</p>
-        <p className="text-sm text-slate-600">Últimas operaciones confirmadas en inventario.</p>
+        <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Movimientos recientes</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Últimas operaciones confirmadas en inventario.</p>
       </div>
       {movements.length === 0 ? (
-        <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 text-sm text-slate-500">
+        <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-sm text-slate-500 dark:text-slate-400">
           No registramos movimientos en el periodo filtrado.
         </div>
       ) : (
         <div className="space-y-3">
           {movements.map((movement) => (
-            <div key={movement.id} className="flex items-center justify-between rounded-2xl border border-white/60 bg-white/70 px-4 py-3 text-sm">
+            <div key={movement.id} className="flex items-center justify-between rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/70 px-4 py-3 text-sm">
               <div>
-                <p className="font-semibold text-slate-900">{movement.description}</p>
-                <p className="text-xs text-slate-500">{movement.date}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-50">{movement.description}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{movement.date}</p>
               </div>
               <span className={`text-sm font-semibold ${movement.direction === "in" ? "text-emerald-600" : "text-rose-600"}`}>
                 {movement.quantity}
@@ -624,43 +624,43 @@ type LocationPanoramaCardProps = {
 
 function LocationPanoramaCard({ overview }: LocationPanoramaCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#ecfeff] to-[#cffafe] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#ecfeff] to-[#cffafe] p-6 shadow-xl">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-lg font-semibold text-slate-900">Panorama por bodega</p>
-          <p className="text-sm text-slate-600">Distribución de inventario y alertas por ubicación.</p>
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Panorama por bodega</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Distribución de inventario y alertas por ubicación.</p>
         </div>
-        <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">Logística</span>
+        <span className="rounded-full border border-white/70 dark:border-slate-700/70 bg-white dark:bg-slate-900/80 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">Logística</span>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor inventario</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{overview.inventoryValue}</p>
-          <p className="text-xs text-slate-500">{overview.activeLocations} bodegas activas</p>
+        <div className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/70 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Valor inventario</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{overview.inventoryValue}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{overview.activeLocations} bodegas activas</p>
         </div>
-        <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock total</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{overview.totalUnits} uds</p>
-          <p className="text-xs text-slate-500">Inventario consolidado</p>
+        <div className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/70 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Stock total</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{overview.totalUnits} uds</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Inventario consolidado</p>
         </div>
       </div>
       <div className="mt-5 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Stock por bodega</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Stock por bodega</p>
         {overview.distribution.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-sm text-slate-500">
+          <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-6 text-sm text-slate-500 dark:text-slate-400">
             No hay ubicaciones con inventario disponible.
           </div>
         ) : (
           overview.distribution.map((location) => (
             <div key={location.label} className="space-y-1 text-sm">
-              <div className="flex items-center justify-between text-slate-600">
-                <span className="font-medium text-slate-900">{location.label}</span>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span className="font-medium text-slate-900 dark:text-slate-50">{location.label}</span>
                 <span>{location.units} · {Math.min(location.percent, 100)}%</span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="rounded-full bg-white/70 px-2 py-0.5">{location.products} productos</span>
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className="rounded-full bg-white dark:bg-slate-900/70 px-2 py-0.5">{location.products} productos</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-100">
+              <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                 <div className="h-2 rounded-full bg-sky-500" style={{ width: `${Math.min(location.percent, 100)}%` }} />
               </div>
             </div>
@@ -668,13 +668,13 @@ function LocationPanoramaCard({ overview }: LocationPanoramaCardProps) {
         )}
       </div>
       <div className="mt-5 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Alertas activas</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">Alertas activas</p>
         {overview.alerts.length === 0 ? (
-          <p className="text-sm text-slate-500">Sin alertas activas por bodega.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Sin alertas activas por bodega.</p>
         ) : (
           overview.alerts.map((alert) => (
-            <div key={alert.label} className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/70 p-3 text-sm text-slate-600">
-              <span className="font-medium text-slate-900">{alert.label}</span>
+            <div key={alert.label} className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-slate-700/70 bg-white dark:bg-slate-900/70 p-3 text-sm text-slate-600 dark:text-slate-300">
+              <span className="font-medium text-slate-900 dark:text-slate-50">{alert.label}</span>
               <span className="text-xs text-amber-600">{alert.low} en seguimiento</span>
               <span className="text-xs font-semibold text-rose-600">{alert.critical} críticas</span>
             </div>
@@ -691,27 +691,27 @@ type ReportsCardProps = {
 
 function ReportsCard({ reports }: ReportsCardProps) {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-gradient-to-b from-[#fef3c7] to-[#fde68a] p-6 shadow-xl">
+    <div className="rounded-[32px] border border-white/70 dark:border-slate-700/70 bg-gradient-to-b from-[#fef3c7] to-[#fde68a] p-6 shadow-xl">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-lg font-semibold text-slate-900">Reportes recientes</p>
-          <p className="text-sm text-slate-600">Historial generado desde Supabase Reports.</p>
+          <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">Reportes recientes</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Historial generado desde Supabase Reports.</p>
         </div>
-        <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700">Últimos {reports.length}</span>
+        <span className="rounded-full bg-white dark:bg-slate-900/80 px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200">Últimos {reports.length}</span>
       </div>
       {reports.length === 0 ? (
-        <div className="mt-5 flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 text-sm text-slate-500">
+        <div className="mt-5 flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-sm text-slate-500 dark:text-slate-400">
           No se han generado reportes todavía.
         </div>
       ) : (
         <div className="mt-5 space-y-3">
           {reports.map((report) => (
-            <div key={report.id} className="rounded-2xl border border-white/60 bg-white/70 p-4">
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <span className="font-semibold capitalize text-slate-900">{report.title}</span>
-                <span className="text-xs text-slate-500">{report.date}</span>
+            <div key={report.id} className="rounded-2xl border border-white/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/70 p-4">
+              <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-semibold capitalize text-slate-900 dark:text-slate-50">{report.title}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{report.date}</span>
               </div>
-              <p className="mt-2 text-xs text-slate-500">{report.summary ?? "Sin descripción."}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{report.summary ?? "Sin descripción."}</p>
             </div>
           ))}
         </div>
@@ -878,7 +878,7 @@ function DualLineChart({ points, primaryLabel, secondaryLabel, primaryColor = "#
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+      <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-40 w-full" aria-hidden>
           {primaryPoints.length > 1 ? (
             <>
@@ -893,8 +893,8 @@ function DualLineChart({ points, primaryLabel, secondaryLabel, primaryColor = "#
             </>
           ) : null}
         </svg>
-        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-2 font-medium text-slate-600">
+        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-2 font-medium text-slate-600 dark:text-slate-300">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: primaryColor }} />
             {primaryLabel}
           </span>
@@ -906,7 +906,7 @@ function DualLineChart({ points, primaryLabel, secondaryLabel, primaryColor = "#
           ) : null}
         </div>
       </div>
-      <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
+      <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
         {points.map((point) => (
           <span key={point.label}>{point.label}</span>
         ))}
