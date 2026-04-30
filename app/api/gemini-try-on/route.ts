@@ -67,11 +67,12 @@ export async function POST(req: NextRequest) {
     // The result is usually an array with the output image info
     // result.data[0] should be the image
     console.log("Gradio result received");
+    const resultData = result?.data as any[] | undefined;
     
-    if (result?.data && result.data[0]) {
+    if (resultData && resultData[0]) {
         // The output might be a URL or a Blob/File object depending on the client version
         // We need to convert it back to base64 to send to client
-        const output = result.data[0] as any;
+        const output = resultData[0];
         
         if (output.url) {
              return NextResponse.json({ result: output.url });

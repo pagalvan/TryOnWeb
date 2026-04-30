@@ -7,9 +7,9 @@ import { getSupabaseAdminClient } from "@/lib/supabase/server"
 export const runtime = "nodejs"
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     sessionId: string
-  }
+  }>
 }
 
 const isValidUuid = (value?: string | null) => Boolean(value && /^[0-9a-fA-F-]{32,}$/.test(value))
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return response
   }
 
-  const sessionId = context.params?.sessionId
+  const { sessionId } = await context.params
   if (!isValidUuid(sessionId)) {
     return NextResponse.json({ message: "Sesión inválida" }, { status: 400 })
   }

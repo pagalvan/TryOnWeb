@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   // Apply rate limiting specifically to API routes to prevent abuse
   if (request.nextUrl.pathname.startsWith('/api')) {
     // Extract client IP address
-    const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? 'unknown'
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
     
     if (ip !== 'unknown') {
       const now = Date.now()

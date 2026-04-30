@@ -370,3 +370,5 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
     </div>
   )
 })
+
+CameraKitPlayer.displayName = "CameraKitPlayer"

@@ -97,7 +97,7 @@ export function DashboardVisuals({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-200" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} width={32} />
-                <RechartsTooltip content={<ChartTooltipContent />} cursor={{ stroke: "#c4b5fd", strokeWidth: 1 }} />
+                <RechartsTooltip content={(props: any) => <ChartTooltipContent {...props} />} cursor={{ stroke: "#c4b5fd", strokeWidth: 1 }} />
                 <Area type="monotone" dataKey="views" stroke="#7c3aed" strokeWidth={2.5} fill="url(#areaViews)" />
                 <Area type="monotone" dataKey="tryons" stroke="#38bdf8" strokeWidth={2.5} fill="url(#areaTryons)" />
               </AreaChart>
@@ -133,7 +133,7 @@ export function DashboardVisuals({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-200" />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} width={28} />
-                <RechartsTooltip content={<ChartTooltipContent />} cursor={{ fill: "rgba(168,85,247,0.12)" }} />
+                <RechartsTooltip content={(props: any) => <ChartTooltipContent {...props} />} cursor={{ fill: "rgba(168,85,247,0.12)" }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="var(--color-pulse)" />
               </BarChart>
             </ChartContainer>

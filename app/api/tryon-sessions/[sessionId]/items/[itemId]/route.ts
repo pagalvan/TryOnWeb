@@ -7,10 +7,10 @@ import { getSupabaseAdminClient } from "@/lib/supabase/server"
 export const runtime = "nodejs"
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     sessionId: string
     itemId: string
-  }
+  }>
 }
 
 const isValidUuid = (value?: string | null) => Boolean(value && /^[0-9a-fA-F-]{32,}$/.test(value))
@@ -21,8 +21,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return response
   }
 
-  const sessionId = context.params?.sessionId
-  const itemId = context.params?.itemId
+  const { sessionId, itemId } = await context.params
 
   if (!isValidUuid(sessionId) || !isValidUuid(itemId)) {
     return NextResponse.json({ message: "Identificadores inválidos" }, { status: 400 })

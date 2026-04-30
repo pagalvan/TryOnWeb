@@ -679,7 +679,7 @@ export async function GET(request: NextRequest) {
 
     if (format === "excel") {
       const buffer = await createExcelBuffer(payload)
-      return new NextResponse(buffer, {
+      return new NextResponse(buffer as unknown as BodyInit, {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "Content-Disposition": `attachment; filename="${DEFAULT_FILE_BASENAME}-${timestamp}.xlsx"`,
@@ -689,7 +689,7 @@ export async function GET(request: NextRequest) {
     }
 
     const buffer = await createPdfBuffer(payload)
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${DEFAULT_FILE_BASENAME}-${timestamp}.pdf"`,
