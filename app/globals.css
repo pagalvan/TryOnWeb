@@ -156,6 +156,13 @@
 
 html {
   overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+body[data-scroll-locked],
+body[style*="overflow: hidden"] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
 }
 
 * {
