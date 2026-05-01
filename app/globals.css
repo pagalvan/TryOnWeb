@@ -150,7 +150,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground overflow-x-hidden overflow-y-scroll;
+    @apply bg-background text-foreground overflow-x-hidden;
   }
 }
 
@@ -166,7 +166,6 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
-  scrollbar-gutter: stable both-edges;
 }
 
 @layer base {

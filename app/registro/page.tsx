@@ -20,7 +20,7 @@ function RegistroHeader() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center" prefetch={true}>
-            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain w-auto h-auto" priority />
+            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} style={{ width: '50px', height: 'auto' }} className="object-contain" priority />
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/login" prefetch={true}>
