@@ -20,7 +20,7 @@ function RegistroHeader() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center" prefetch={true}>
-            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain" priority />
+            <Image src="/logo.png" alt="TryOnWeb Logo" width={50} height={32} className="object-contain w-auto h-auto" priority />
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/login" prefetch={true}>
@@ -124,26 +124,26 @@ export default function RegistroPage() {
                     control={form.control}
                     name="codigoPais"
                     render={({ field }) => (
-                      <FormItem className="w-[120px]">
+                      <FormItem className="w-[80px]">
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="País" />
+                              <SelectValue placeholder="+" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="+54">+54 🇦🇷</SelectItem>
-                            <SelectItem value="+57">+57 🇨🇴</SelectItem>
-                            <SelectItem value="+1">+1 🇺🇸/🇨🇦</SelectItem>
-                            <SelectItem value="+34">+34 🇪🇸</SelectItem>
-                            <SelectItem value="+51">+51 🇵🇪</SelectItem>
-                            <SelectItem value="+52">+52 🇲🇽</SelectItem>
-                            <SelectItem value="+56">+56 🇨🇱</SelectItem>
-                            <SelectItem value="+58">+58 🇻🇪</SelectItem>
-                            <SelectItem value="+593">+593 🇪🇨</SelectItem>
-                            <SelectItem value="+55">+55 🇧🇷</SelectItem>
-                            <SelectItem value="+507">+507 🇵🇦</SelectItem>
-                            <SelectItem value="+506">+506 🇨🇷</SelectItem>
+                            <SelectItem value="+54">+54</SelectItem>
+                            <SelectItem value="+57">+57</SelectItem>
+                            <SelectItem value="+1">+1</SelectItem>
+                            <SelectItem value="+34">+34</SelectItem>
+                            <SelectItem value="+51">+51</SelectItem>
+                            <SelectItem value="+52">+52</SelectItem>
+                            <SelectItem value="+56">+56</SelectItem>
+                            <SelectItem value="+58">+58</SelectItem>
+                            <SelectItem value="+593">+593</SelectItem>
+                            <SelectItem value="+55">+55</SelectItem>
+                            <SelectItem value="+507">+507</SelectItem>
+                            <SelectItem value="+506">+506</SelectItem>
                           </SelectContent>
                         </Select>
                       </FormItem>
@@ -152,7 +152,7 @@ export default function RegistroPage() {
                   <div className="flex-1">
                     <FormControl>
                       <Input
-                        placeholder="3001234567"
+                        placeholder="Número de celular"
                         {...register("telefono", {
                           pattern: { value: /^\d{7,15}$/, message: "Teléfono inválido" },
                         })}
