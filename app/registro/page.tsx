@@ -4,10 +4,11 @@
 import React from "react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
-import { Form, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import Image from "next/image"
 import { apiFetch } from "@/lib/api-client"
@@ -34,6 +35,7 @@ function RegistroHeader() {
 
 type RegisterFormValues = {
   nombre: string
+  codigoPais: string
   telefono?: string
   email: string
   password: string
@@ -47,6 +49,7 @@ export default function RegistroPage() {
   const form = useForm<RegisterFormValues>({
     defaultValues: {
       nombre: "",
+      codigoPais: "+57",
       telefono: "",
       email: "",
       password: "",
@@ -65,11 +68,12 @@ export default function RegistroPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
-      const { nombre, email, password, telefono } = data
+      const { nombre, email, password, telefono, codigoPais } = data
+      const telefonoCompleto = telefono ? `${codigoPais}${telefono}` : undefined
 
       await apiFetch("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ nombre, email, password, telefono }),
+        body: JSON.stringify({ nombre, email, password, telefono: telefonoCompleto }),
       })
 
       toast({
@@ -115,14 +119,47 @@ export default function RegistroPage() {
 
               <FormItem>
                 <FormLabel>Teléfono</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="3001234567"
-                    {...register("telefono", {
-                      pattern: { value: /^\d{7,15}$/, message: "Teléfono inválido" },
-                    })}
+                <div className="flex gap-2">
+                  <FormField
+                    control={form.control}
+                    name="codigoPais"
+                    render={({ field }) => (
+                      <FormItem className="w-[120px]">
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="País" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="+54">+54 🇦🇷</SelectItem>
+                            <SelectItem value="+57">+57 🇨🇴</SelectItem>
+                            <SelectItem value="+1">+1 🇺🇸/🇨🇦</SelectItem>
+                            <SelectItem value="+34">+34 🇪🇸</SelectItem>
+                            <SelectItem value="+51">+51 🇵🇪</SelectItem>
+                            <SelectItem value="+52">+52 🇲🇽</SelectItem>
+                            <SelectItem value="+56">+56 🇨🇱</SelectItem>
+                            <SelectItem value="+58">+58 🇻🇪</SelectItem>
+                            <SelectItem value="+593">+593 🇪🇨</SelectItem>
+                            <SelectItem value="+55">+55 🇧🇷</SelectItem>
+                            <SelectItem value="+507">+507 🇵🇦</SelectItem>
+                            <SelectItem value="+506">+506 🇨🇷</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
+                  <div className="flex-1">
+                    <FormControl>
+                      <Input
+                        placeholder="3001234567"
+                        {...register("telefono", {
+                          pattern: { value: /^\d{7,15}$/, message: "Teléfono inválido" },
+                        })}
+                      />
+                    </FormControl>
+                  </div>
+                </div>
                 <FormMessage>{errors.telefono?.message}</FormMessage>
               </FormItem>
 
