@@ -5,7 +5,7 @@ export type SettingsNotifications = {
 }
 
 export type SettingsAppearance = {
-  darkMode: boolean
+  theme: "light" | "dark" | "system"
   animations: boolean
 }
 

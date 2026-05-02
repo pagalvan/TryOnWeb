@@ -8,7 +8,7 @@ export type SettingsFormState = {
     newTryons: boolean
   }
   appearance: {
-    darkMode: boolean
+    theme: "light" | "dark" | "system"
     animations: boolean
   }
   lens: {

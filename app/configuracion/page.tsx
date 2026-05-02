@@ -30,21 +30,6 @@ export default function ConfiguracionPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const applyThemePreference = useCallback((isDark: boolean) => {
-    if (typeof window === "undefined") return
-    const root = window.document.documentElement
-    root.classList.toggle("dark", isDark)
-    window.localStorage.setItem("tryon-theme", isDark ? "dark" : "light")
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const storedTheme = window.localStorage.getItem("tryon-theme")
-    if (storedTheme === "dark" || storedTheme === "light") {
-      window.document.documentElement.classList.toggle("dark", storedTheme === "dark")
-    }
-  }, [])
-
   const mapResponseToState = useCallback((data: SettingsResponseData) => {
     setForm({
       displayName: data.profile.displayName ?? "",
@@ -61,8 +46,7 @@ export default function ConfiguracionPage() {
     })
     setEmail(data.profile.email)
     setMetrics(data.metrics)
-    applyThemePreference(data.preferences.appearance.darkMode)
-  }, [applyThemePreference])
+  }, [])
 
   const fetchSettings = useCallback(async () => {
     setLoading(true)
@@ -178,7 +162,7 @@ export default function ConfiguracionPage() {
               <div className="space-y-6">
                 <ProfileCard form={form} email={email} onChange={setForm} />
                 <NotificationsCard form={form} onChange={setForm} />
-                <AppearanceCard form={form} onChange={setForm} onThemeChange={applyThemePreference} />
+                <AppearanceCard form={form} onChange={setForm} />
                 <LensCard form={form} onChange={setForm} />
                 <SecurityCard form={form} onChange={setForm} onPasswordSubmit={handlePasswordSubmit} />
                 {metrics && <MetricsCard metrics={metrics} />}

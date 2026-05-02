@@ -15,7 +15,7 @@ const DEFAULT_PREFERENCES: SettingsPreferences = {
     newTryons: false,
   },
   appearance: {
-    darkMode: false,
+    theme: "system",
     animations: true,
   },
   lens: {
@@ -62,10 +62,10 @@ const normalizePreferences = (raw: unknown): { company: string | null; preferenc
           : DEFAULT_PREFERENCES.notifications.newTryons,
     },
     appearance: {
-      darkMode:
-        typeof storedAppearance.darkMode === "boolean"
-          ? storedAppearance.darkMode
-          : DEFAULT_PREFERENCES.appearance.darkMode,
+      theme:
+        storedAppearance.theme === "light" || storedAppearance.theme === "dark" || storedAppearance.theme === "system"
+          ? storedAppearance.theme
+          : DEFAULT_PREFERENCES.appearance.theme,
       animations:
         typeof storedAppearance.animations === "boolean"
           ? storedAppearance.animations

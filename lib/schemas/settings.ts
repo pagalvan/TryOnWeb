@@ -29,7 +29,7 @@ export const settingsPayloadSchema = z.object({
     newTryons: z.boolean(),
   }),
   appearance: z.object({
-    darkMode: z.boolean(),
+    theme: z.enum(["light", "dark", "system"]),
     animations: z.boolean(),
   }),
   lens: z.object({

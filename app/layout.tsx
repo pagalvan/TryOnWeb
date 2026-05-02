@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { ThemeProvider } from "@/components/theme-provider"
+
 export default function RootLayout({
   children,
 }: {
@@ -34,11 +36,13 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <Suspense>
-          <Navbar />
-        </Suspense>
-        {children}
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <Suspense>
+            <Navbar />
+          </Suspense>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
