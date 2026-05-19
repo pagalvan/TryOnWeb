@@ -1,0 +1,1092 @@
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { ArrowLeft, Edit, Eye, Heart, Loader2, Share2, Wand2, Palette, Ruler, Save, X } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { apiFetch } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
+import { CameraKitPlayer, type CameraKitPlayerHandle } from "@/components/camera-kit/CameraKitPlayer"
+import { getCameraKitToken, CAMERA_KIT_DEFAULT_LENS_GROUP_ID } from "@/lib/camera-kit"
+import { supabase } from "@/lib/supabase/client"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  formatCurrency,
+  getLensId,
+  getPrimaryLensAsset,
+  getLensIdForColor,
+  getLensAssetForColor,
+  type LensAsset,
+} from "@/components/virtual-try-on/types"
+import { GeminiTryOnDialog } from "@/components/virtual-try-on/gemini-try-on-dialog"
+
+type InventarioItem = {
+  id: string
+  ubicacion: string
+  cantidad: number
+}
+
+type ProductoDetalle = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  categoria_id: string | null
+  categorias?: { id: string; nombre: string } | null
+  valor_unitario: number | null
+  metadata: Record<string, any> | null
+  sku: string | null
+  estado: string
+  inventario_items: InventarioItem[]
+  lens_assets?: LensAsset[] | null
+  colores?: string[]
+  tallas?: string[] | string
+}
+
+export default function ProductoDetallePage() {
+  const params = useParams<{ id: string }>()
+  const router = useRouter()
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [producto, setProducto] = useState<ProductoDetalle | null>(null)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
+  const viewLoggedRef = useRef(false)
+  const mediaRef = useRef<HTMLDivElement | null>(null)
+  const [arActive, setArActive] = useState(false)
+  const [cameraFacing, setCameraFacing] = useState<"user" | "environment">("user")
+  const { toast } = useToast()
+
+  // AI Recommendations State
+  const [analyzing, setAnalyzing] = useState(false)
+  const [recommendations, setRecommendations] = useState<any | null>(null)
+  const [recommendationOpen, setRecommendationOpen] = useState(false)
+  const playerRef = useRef<CameraKitPlayerHandle>(null)
+  const [lastSnapshotUrl, setLastSnapshotUrl] = useState<string | null>(null)
+
+  // Try-On Session State
+  const sessionIdRef = useRef<string | null>(null)
+  const itemIdRef = useRef<string | null>(null)
+  const sessionStartTimeRef = useRef<number | null>(null)
+
+  // Measurements State
+  const [measurementsOpen, setMeasurementsOpen] = useState(false)
+  const [measurements, setMeasurements] = useState({
+    altura_cm: '',
+    peso_kg: '',
+    pecho_cm: '',
+    cintura_cm: '',
+    cadera_cm: '',
+    complexion: 'media'
+  })
+  const [savingMeasurements, setSavingMeasurements] = useState(false)
+
+  const cameraToken = getCameraKitToken()
+  const lensGroupId = CAMERA_KIT_DEFAULT_LENS_GROUP_ID
+
+  const productoId = params?.id
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUserRole(localStorage.getItem("userRole"))
+    }
+  }, [])
+
+  const registerEvent = useCallback(
+    async (eventType: "view" | "share", metadata?: Record<string, unknown>) => {
+      if (!productoId) return
+
+      await apiFetch(`/api/product-events`, {
+        method: "POST",
+        body: JSON.stringify({
+          productId: productoId,
+          eventType,
+          metadata,
+        }),
+      })
+    },
+    [productoId],
+  )
+
+  const refreshFavorite = useCallback(async () => {
+    if (!productoId) {
+      setIsFavorited(false)
+      return
+    }
+
+    // Check if user is logged in before fetching to avoid 401 errors
+    const role = localStorage.getItem("userRole")
+    if (!role) {
+      setIsFavorited(false)
+      return
+    }
+
+    try {
+      const response = await apiFetch<{ favorited: boolean }>(`/api/products/${productoId}/favorite`)
+      setIsFavorited(Boolean(response?.favorited))
+    } catch (error) {
+      if (error instanceof Error && /(No autorizado|Permisos insuficientes)/i.test(error.message)) {
+        setIsFavorited(false)
+      }
+    }
+  }, [productoId])
+
+  useEffect(() => {
+    if (!productoId) return
+    const fetchProducto = async () => {
+      setLoading(true)
+      try {
+        const response = await apiFetch<{ data: ProductoDetalle }>(`/api/products/${productoId}`)
+        if (!response.data) {
+          setError("Producto no encontrado")
+          setProducto(null)
+        } else {
+          setProducto(response.data)
+          setError(null)
+          await refreshFavorite()
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No pudimos cargar el producto"
+        setError(message)
+        setProducto(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducto()
+  }, [productoId, refreshFavorite])
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && productoId) {
+      setShareUrl(`${window.location.origin}/productos/${productoId}`)
+    }
+  }, [productoId])
+
+  useEffect(() => {
+    viewLoggedRef.current = false
+    setIsFavorited(false)
+    setFavoriteLoading(false)
+    setShareLoading(false)
+    setArActive(false)
+    setCameraFacing("user")
+    setSelectedColor(null)
+    setSelectedSize(null)
+  }, [productoId])
+
+  useEffect(() => {
+    if (!producto || !productoId || viewLoggedRef.current) {
+      return
+    }
+
+    viewLoggedRef.current = true
+    registerEvent("view").catch(() => {
+      viewLoggedRef.current = false
+    })
+  }, [producto, productoId, registerEvent])
+
+  const handleFavorite = useCallback(async () => {
+    if (favoriteLoading) {
+      return
+    }
+
+    try {
+      setFavoriteLoading(true)
+      if (!productoId) {
+        throw new Error("Producto inválido")
+      }
+
+      if (isFavorited) {
+        await apiFetch(`/api/products/${productoId}/favorite`, { method: "DELETE" })
+        setIsFavorited(false)
+        toast({ title: "Favorito eliminado", description: "Ya no seguirá en tu lista." })
+      } else {
+        await apiFetch(`/api/products/${productoId}/favorite`, { method: "POST" })
+        setIsFavorited(true)
+        toast({ title: "Producto guardado", description: "Lo tendrás presente en tus métricas." })
+      }
+    } catch (error) {
+      if (error instanceof Error && /(No autorizado|Permisos insuficientes)/i.test(error.message)) {
+        toast({ title: "Inicia sesión", description: "Necesitas iniciar sesión para administrar favoritos." })
+        return
+      }
+
+      toast({
+        title: "No pudimos guardar",
+        description: error instanceof Error ? error.message : "Intenta nuevamente en unos segundos.",
+        variant: "destructive",
+      })
+    } finally {
+      setFavoriteLoading(false)
+    }
+  }, [favoriteLoading, isFavorited, productoId, toast])
+
+  const handleShare = useCallback(async () => {
+    if (!productoId || shareLoading) {
+      return
+    }
+
+    try {
+      setShareLoading(true)
+      const url = shareUrl || (typeof window !== "undefined" ? window.location.href : "")
+      const nav =
+        typeof navigator !== "undefined"
+          ? (navigator as Navigator & {
+              share?: Navigator["share"]
+              clipboard?: Navigator["clipboard"]
+            })
+          : undefined
+      let shared = false
+      let shareMethod: "web-share" | "clipboard" | null = null
+
+      if (nav?.share && typeof nav.share === "function") {
+        await nav.share({ title: producto?.nombre, text: producto?.descripcion ?? undefined, url })
+        shared = true
+        shareMethod = "web-share"
+        toast({ title: "Gracias por compartir", description: "Más personas podrán descubrir esta prenda." })
+      } else if (nav?.clipboard && typeof nav.clipboard.writeText === "function" && url) {
+        await nav.clipboard.writeText(url)
+        shared = true
+        shareMethod = "clipboard"
+        toast({ title: "Enlace copiado", description: "Ya puedes pegarlo donde prefieras." })
+      }
+
+      if (shared) {
+        // Don't block or error if analytics fails
+        registerEvent("share", { method: shareMethod ?? "unknown" }).catch((err) => 
+          console.warn("Analytics warning:", err)
+        )
+      } else {
+        toast({
+          title: "No pudimos compartir",
+          description: "Copia manualmente el enlace desde la barra del navegador.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return
+      }
+
+      toast({
+        title: "No pudimos compartir",
+        description: error instanceof Error ? error.message : "Intenta nuevamente más tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setShareLoading(false)
+    }
+  }, [producto?.descripcion, producto?.nombre, productoId, registerEvent, shareLoading, shareUrl, toast])
+
+  const stockTotal = useMemo(() => {
+    if (!producto?.inventario_items) return 0
+    return producto.inventario_items.reduce((acc, item) => acc + (item.cantidad ?? 0), 0)
+  }, [producto])
+
+  const lensId = useMemo(() => getLensIdForColor(producto, selectedColor), [producto, selectedColor])
+  const lensAsset = useMemo(() => getLensAssetForColor(producto, selectedColor), [producto, selectedColor])
+  const hasLens = lensId.length > 0
+
+  useEffect(() => {
+    if (!hasLens && arActive) {
+      setArActive(false)
+    }
+  }, [arActive, hasLens])
+
+  const canActivateAr = hasLens
+  const showCameraPlayer = arActive && lensId.length > 0
+
+  const scrollToMedia = () => {
+    if (typeof window === "undefined") return
+    window.requestAnimationFrame(() => {
+      mediaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }
+
+  const handleStartAr = async () => {
+    // Check if user is logged in via localStorage (client-side check)
+    const role = localStorage.getItem("userRole")
+    if (!role) {
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname)}&reason=tryon`)
+      return
+    }
+
+    if (!canActivateAr) return
+    setArActive(true)
+    scrollToMedia()
+    startSession()
+  }
+
+  const handleStopAr = () => {
+    setArActive(false)
+    endSession()
+  }
+
+  const handlePlayerError = (error: Error) => {
+    setArActive(false)
+    toast({
+      title: "No pudimos iniciar la cámara",
+      description: error.message,
+      variant: "destructive",
+    })
+  }
+
+  const handleAnalyze = async () => {
+    if (!playerRef.current) return
+    setAnalyzing(true)
+    
+    try {
+      // 1. Capture Snapshot
+      const blob = await playerRef.current.captureSnapshot()
+      if (!blob) throw new Error("No se pudo capturar la imagen de la cámara")
+
+      // 2. Upload to Supabase
+      const fileName = `snapshot-${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('tryon-snapshots')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: false
+        })
+
+      if (uploadError) throw new Error(`Error al subir imagen: ${uploadError.message}`)
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('tryon-snapshots')
+        .getPublicUrl(fileName)
+
+      setLastSnapshotUrl(publicUrl)
+
+      // 3. Call AI API
+      const response = await fetch('/api/recommendations/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageUrl: publicUrl,
+          measurements: measurements.altura_cm ? measurements : undefined
+        }),
+      })
+
+      if (!response.ok) throw new Error("Error al analizar la imagen con IA")
+
+      const result = await response.json()
+      if (result.styleRecommendations || result.recommendations) {
+        setRecommendations(result)
+        setRecommendationOpen(true)
+      } else {
+        throw new Error("No se recibieron recomendaciones válidas")
+      }
+
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Error al analizar",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      })
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  const handleCapture = async () => {
+    if (!playerRef.current || !producto) return
+
+    try {
+      const blob = await playerRef.current.captureSnapshot()
+      if (!blob) throw new Error("Failed to capture snapshot")
+
+      const reader = new FileReader()
+      reader.readAsDataURL(blob)
+      reader.onloadend = async () => {
+        const base64data = reader.result as string
+        
+        const response = await fetch('/api/tryon-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prenda_id: producto.id,
+            image_url: base64data,
+            tryon_type: 'lens',
+            metadata: { productName: producto.nombre }
+          })
+        })
+
+        if (response.ok) {
+          toast({ title: "Guardado", description: "Prueba guardada en tu historial." })
+        } else {
+          throw new Error("Failed to save")
+        }
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error", description: "No se pudo guardar la prueba.", variant: "destructive" })
+    }
+  }
+
+  useEffect(() => {
+    const fetchMeasurements = async () => {
+      try {
+        const response = await apiFetch<{ measurements: any }>('/api/user/measurements')
+        if (response.measurements) {
+          setMeasurements({
+            altura_cm: response.measurements.altura_cm || '',
+            peso_kg: response.measurements.peso_kg || '',
+            pecho_cm: response.measurements.pecho_cm || '',
+            cintura_cm: response.measurements.cintura_cm || '',
+            cadera_cm: response.measurements.cadera_cm || '',
+            complexion: response.measurements.complexion || 'media'
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching measurements", error)
+      }
+    }
+    if (userRole) {
+      fetchMeasurements()
+    }
+  }, [userRole])
+
+  const handleSaveMeasurements = async () => {
+    setSavingMeasurements(true)
+    try {
+      const response = await apiFetch('/api/user/measurements', {
+        method: 'POST',
+        body: JSON.stringify(measurements)
+      })
+      toast({ title: "Medidas guardadas", description: "Tus medidas se usarán para recomendaciones más precisas." })
+      setMeasurementsOpen(false)
+    } catch (error) {
+      toast({
+        title: "Error al guardar",
+        description: error instanceof Error ? error.message : "Intenta nuevamente",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingMeasurements(false)
+    }
+  }
+
+  const startSession = async () => {
+    if (!productoId) return
+
+    const validLensAssetId = lensAsset?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lensAsset.id) 
+      ? lensAsset.id 
+      : undefined
+
+    try {
+      const response = await apiFetch<{ sessionId: string; itemId: string }>("/api/tryon-sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: productoId,
+          lensAssetId: validLensAssetId,
+          device: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+          platform: "web",
+          origin: "product-detail",
+        }),
+      })
+
+      if (response.sessionId && response.itemId) {
+        sessionIdRef.current = response.sessionId
+        itemIdRef.current = response.itemId
+        sessionStartTimeRef.current = Date.now()
+      }
+    } catch (error) {
+      console.error("Failed to start try-on session", error)
+      if (error instanceof Error && (error.message === "No autorizado" || error.message.includes("401"))) {
+        toast({
+          title: "Sesión expirada",
+          description: "Por favor inicia sesión nuevamente.",
+        })
+        // Clear invalid state
+        localStorage.removeItem("userRole")
+        router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)
+      }
+    }
+  }
+
+  const endSession = async () => {
+    if (!sessionIdRef.current) return
+
+    const duration = sessionStartTimeRef.current ? (Date.now() - sessionStartTimeRef.current) / 1000 : 0
+
+    try {
+      await apiFetch(`/api/tryon-sessions/${sessionIdRef.current}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          endedAt: new Date().toISOString(),
+          lastItem: itemIdRef.current
+            ? {
+                itemId: itemIdRef.current,
+                status: "exito", // Assuming success if they closed it manually
+                durationSeconds: duration,
+              }
+            : undefined,
+        }),
+      })
+    } catch (error) {
+      console.error("Failed to end try-on session", error)
+    } finally {
+      sessionIdRef.current = null
+      itemIdRef.current = null
+      sessionStartTimeRef.current = null
+    }
+  }
+
+  // End session on unmount if active
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current) {
+        // We can't await in cleanup, but we can trigger the call
+        const sessionId = sessionIdRef.current
+        const itemId = itemIdRef.current
+        const startTime = sessionStartTimeRef.current
+        const duration = startTime ? (Date.now() - startTime) / 1000 : 0
+        
+        // Use beacon or fetch with keepalive if possible, but simple fetch is better than nothing
+        // Note: apiFetch might not work if component unmounts quickly, but let's try
+        fetch(`/api/tryon-sessions/${sessionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                endedAt: new Date().toISOString(),
+                lastItem: itemId ? { itemId, status: "parcial", durationSeconds: duration } : undefined
+            }),
+            keepalive: true
+        }).catch(e => console.error("Cleanup session end failed", e))
+      }
+    }
+  }, [])
+
+  function Detalle({ label, value }: { label: string; value: string }) {
+    return (
+      <div className="flex justify-between py-2 border-b border-border last:border-b-0">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium text-foreground text-right">{value}</span>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+
+        <main className="container mx-auto px-4 py-16 flex flex-col items-center gap-4 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          Cargando producto...
+        </main>
+      </div>
+    )
+  }
+
+  if (error || !producto) {
+    return (
+      <div className="min-h-screen bg-background">
+
+        <main className="container mx-auto px-4 py-16 text-center">
+          <h2 className="font-display text-3xl text-foreground mb-4">No pudimos cargar el producto</h2>
+          <p className="text-muted-foreground mb-6">{error ?? "Revisa el enlace e intenta nuevamente."}</p>
+          <Button asChild>
+            <Link href="/productos">Regresar al catálogo</Link>
+          </Button>
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+
+      <main className="container mx-auto px-4 py-8">
+        <Link
+          href="/productos"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver al catálogo
+        </Link>
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div ref={mediaRef}>
+            <div className={cn(
+              "bg-accent rounded-2xl overflow-hidden mb-4 relative transition-all duration-300",
+              showCameraPlayer ? "aspect-[3/4] md:aspect-square h-[60vh] md:h-auto" : "aspect-square"
+            )}>
+              {showCameraPlayer ? (
+                <>
+                  <CameraKitPlayer
+                    ref={playerRef}
+                    key={`${producto.id}-hero-${cameraFacing}-${lensId}`}
+                    apiToken={cameraToken}
+                    lensId={lensId}
+                    lensGroupId={lensGroupId}
+                    cameraFacing={cameraFacing}
+                    onError={handlePlayerError}
+                    className="h-full w-full"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={handleCapture}
+                    className="absolute bottom-4 right-4 h-12 w-12 rounded-full shadow-lg bg-white/20 backdrop-blur-md border-white/30 hover:bg-white/40 text-white z-10"
+                  >
+                    <Save className="h-6 w-6" />
+                  </Button>
+                </>
+              ) : (
+                <Image
+                  src={producto.metadata?.image_url || "/placeholder.svg"}
+                  alt={producto.nombre}
+                  fill
+                  className="object-cover"
+                />
+              )}
+            </div>
+            {producto.metadata?.gallery?.length ? (
+              <div className="grid grid-cols-4 gap-4">
+                {producto.metadata.gallery.slice(0, 4).map((url: string, idx: number) => (
+                  <div key={url + idx} className="aspect-square bg-accent rounded-lg overflow-hidden relative">
+                    <Image src={url} alt={`Vista ${idx + 1}`} fill className="object-cover" />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div>
+            <div className="mb-6">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="text-muted-foreground">{producto.categorias?.nombre ?? "Sin categoría"}</p>
+                {hasLens ? (
+                  <Badge className="flex items-center gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-500">
+                    <Eye className="h-3 w-3" /> AR disponible
+                  </Badge>
+                ) : null}
+              </div>
+              <h1 className="font-display text-4xl font-bold text-foreground mb-4">{producto.nombre}</h1>
+              <p className="text-3xl font-bold text-foreground mb-6">{formatCurrency(producto.valor_unitario)}</p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              <div className="grid grid-cols-2 gap-3">
+                {hasLens ? (
+                  <Button
+                    type="button"
+                    className={cn(
+                      "w-full shadow-sm transition-all",
+                      arActive ? "bg-zinc-800 hover:bg-zinc-900 text-white" : ""
+                    )}
+                    onClick={arActive ? handleStopAr : handleStartAr}
+                    disabled={!canActivateAr || analyzing}
+                  >
+                    {arActive ? <X className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    {arActive ? "Cerrar" : "Probar AR"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full bg-muted text-muted-foreground opacity-50"
+                    disabled
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    No AR
+                  </Button>
+                )}
+
+                <div className="w-full">
+                  <GeminiTryOnDialog 
+                    productImage={producto.metadata?.image_url || "/placeholder.svg"} 
+                    productName={producto.nombre}
+                    className="w-full shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {arActive && (
+                <Button
+                  type="button"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm animate-in fade-in slide-in-from-top-2"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                >
+                  {analyzing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-4 w-4" />
+                  )}
+                  {analyzing ? "Analizando..." : "Analizar Look con IA"}
+                </Button>
+              )}
+
+              <div className="flex items-center justify-between gap-1 p-1 bg-muted/40 rounded-lg border border-border/50">
+                {userRole && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-9 px-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => setMeasurementsOpen(true)}
+                  >
+                    <Ruler className="mr-2 h-3.5 w-3.5" />
+                    Medidas
+                  </Button>
+                )}
+                
+                {userRole && <div className="w-px h-4 bg-border/50" />}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "flex-1 h-9 px-2 text-xs sm:text-sm",
+                    isFavorited ? "text-red-500 hover:text-red-600 hover:bg-red-50" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  disabled={favoriteLoading || analyzing}
+                  onClick={handleFavorite}
+                >
+                  {favoriteLoading ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Heart className={cn("mr-2 h-3.5 w-3.5", isFavorited && "fill-current")} />
+                  )}
+                  {isFavorited ? "Guardado" : "Guardar"}
+                </Button>
+
+                <div className="w-px h-4 bg-border/50" />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-9 px-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                  disabled={shareLoading}
+                  onClick={handleShare}
+                >
+                  {shareLoading ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Share2 className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Compartir
+                </Button>
+              </div>
+
+              {userRole === "admin" && (
+                <Button variant="outline" size="sm" asChild className="w-full h-8 text-xs border-dashed text-muted-foreground">
+                  <Link href={`/inventario?edit=${producto.id}`}>
+                    <Edit className="mr-2 h-3.5 w-3.5" />Editar Producto
+                  </Link>
+                </Button>
+              )}
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Información</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="py-2 border-b border-border last:border-b-0">
+                    <p className="text-foreground leading-relaxed whitespace-pre-line">
+                      {producto.descripcion ?? "Aún no hay descripción para este producto."}
+                    </p>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border last:border-b-0 items-center">
+                    <span className="text-muted-foreground">Colores disponibles</span>
+                    <div className="flex gap-1.5 justify-end">
+                       {producto.colores && producto.colores.length > 0 ? (
+                          producto.colores.map((c, i) => {
+                            const parts = c.split(":")
+                            const code = parts.length > 1 ? parts[1] : parts[0]
+                            const isSelected = selectedColor === code
+                            return (
+                              <button 
+                                key={i} 
+                                className={cn(
+                                  "h-6 w-6 rounded-full border shadow-sm transition-all",
+                                  isSelected ? "ring-2 ring-primary ring-offset-2 border-primary" : "border-border hover:scale-110"
+                                )}
+                                style={{ backgroundColor: code }} 
+                                title={code}
+                                onClick={() => setSelectedColor(code)}
+                              />
+                            )
+                          })
+                       ) : (
+                         <span className="font-medium text-foreground">No especificado</span>
+                       )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border last:border-b-0 items-center">
+                    <span className="text-muted-foreground">Tallas disponibles</span>
+                    <div className="flex gap-1.5 justify-end flex-wrap max-w-[60%]">
+                       {(() => {
+                         const tallasRaw = producto.tallas
+                         const tallas = Array.isArray(tallasRaw) 
+                           ? tallasRaw 
+                           : typeof tallasRaw === 'string' 
+                             ? tallasRaw.split(',').map(t => t.trim()).filter(Boolean)
+                             : []
+                         
+                         if (tallas.length > 0) {
+                           return tallas.map((t, i) => {
+                             const isSelected = selectedSize === t
+                             return (
+                               <button 
+                                 key={i} 
+                                 className={cn(
+                                   "min-w-[2rem] h-8 px-2 rounded-md border text-sm font-medium transition-all",
+                                   isSelected 
+                                     ? "bg-primary text-primary-foreground border-primary" 
+                                     : "bg-background text-foreground border-border hover:border-primary/50"
+                                 )}
+                                 onClick={() => setSelectedSize(t)}
+                               >
+                                 {t}
+                               </button>
+                             )
+                           })
+                         }
+                         return <span className="font-medium text-foreground">No especificado</span>
+                       })()}
+                    </div>
+                  </div>
+                  <Detalle label="Ubicación de prendas" value={producto.inventario_items.map((i) => i.ubicacion).join(", ") || "Sin registros"} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+      </main>
+
+      <Dialog open={recommendationOpen} onOpenChange={setRecommendationOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-cyan-600" />
+              Recomendaciones de Estilo
+            </DialogTitle>
+            <DialogDescription>
+              Basado en tu look actual, nuestra IA sugiere:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Colorimetry Section */}
+            {recommendations?.colorimetry && (
+              <div className="rounded-lg border p-4 bg-cyan-50/50 dark:bg-cyan-900/10">
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-cyan-600" /> 
+                  Análisis de Colorimetría
+                </h4>
+                <div className="mb-2">
+                  <span className="font-medium text-sm">{recommendations.colorimetry.season}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">{recommendations.colorimetry.description}</p>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {recommendations.colorimetry.bestColors && Array.isArray(recommendations.colorimetry.bestColors) ? (
+                    recommendations.colorimetry.bestColors.map((color: any, i: number) => {
+                      if (typeof color === 'string') {
+                         return (
+                            <Badge key={i} variant="secondary" className="text-xs bg-background/80">
+                              {color}
+                            </Badge>
+                         )
+                      }
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <div 
+                            className="w-6 h-6 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
+                            style={{ backgroundColor: color.hex || '#ccc' }}
+                          />
+                          <span className="text-sm font-medium">{color.name}</span>
+                        </div>
+                      )
+                    })
+                  ) : recommendations.colorimetry.bestColor ? (
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-6 h-6 rounded-full border shadow-sm ring-1 ring-offset-1 ring-border" 
+                        style={{ backgroundColor: recommendations.colorimetry.bestColor.hex }}
+                      />
+                      <span className="text-sm font-medium">{recommendations.colorimetry.bestColor.name}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {/* Size Section */}
+            {recommendations?.sizeRecommendation && (
+              <div className="rounded-lg border p-4 bg-blue-50/50 dark:bg-blue-900/10">
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Ruler className="h-4 w-4 text-blue-600" />
+                  Recomendación de Talla
+                </h4>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="font-medium text-sm">{recommendations.sizeRecommendation.fit}</span>
+                  {recommendations.sizeRecommendation.sizeRange && (
+                    <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
+                      {recommendations.sizeRecommendation.sizeRange}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{recommendations.sizeRecommendation.advice}</p>
+              </div>
+            )}
+
+            {/* Style Recommendations */}
+            <h4 className="font-semibold text-sm mt-4 mb-2 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-foreground" />
+              Completar el Look
+            </h4>
+            {(recommendations?.styleRecommendations || (Array.isArray(recommendations) ? recommendations : []))?.map((rec: any, index: number) => {
+              const CardContent = () => (
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-sm">{rec.name}</h4>
+                    <Badge variant="outline" className="text-xs">{rec.category}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">{rec.reason}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-cyan-500 rounded-full" 
+                        style={{ width: `${rec.confidence}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground">{rec.confidence}% Match</span>
+                  </div>
+                </>
+              );
+
+              return rec.id ? (
+                <Link 
+                  key={index} 
+                  href={`/productos/${rec.id}`}
+                  className="block rounded-lg border p-4 bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  <CardContent />
+                </Link>
+              ) : (
+                <div key={index} className="rounded-lg border p-4 bg-muted/30">
+                  <CardContent />
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={measurementsOpen} onOpenChange={setMeasurementsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mis Medidas Corporales</DialogTitle>
+            <DialogDescription>
+              Ingresa tus medidas para obtener recomendaciones de talla más precisas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="altura">Altura (cm)</Label>
+                <Input 
+                  id="altura" 
+                  type="number" 
+                  placeholder="170" 
+                  value={measurements.altura_cm}
+                  onChange={(e) => setMeasurements({...measurements, altura_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="peso">Peso (kg)</Label>
+                <Input 
+                  id="peso" 
+                  type="number" 
+                  placeholder="70" 
+                  value={measurements.peso_kg}
+                  onChange={(e) => setMeasurements({...measurements, peso_kg: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pecho">Pecho (cm)</Label>
+                <Input 
+                  id="pecho" 
+                  type="number" 
+                  placeholder="90" 
+                  value={measurements.pecho_cm}
+                  onChange={(e) => setMeasurements({...measurements, pecho_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cintura">Cintura (cm)</Label>
+                <Input 
+                  id="cintura" 
+                  type="number" 
+                  placeholder="80" 
+                  value={measurements.cintura_cm}
+                  onChange={(e) => setMeasurements({...measurements, cintura_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cadera">Cadera (cm)</Label>
+                <Input 
+                  id="cadera" 
+                  type="number" 
+                  placeholder="95" 
+                  value={measurements.cadera_cm}
+                  onChange={(e) => setMeasurements({...measurements, cadera_cm: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="complexion">Complexión</Label>
+              <Select 
+                value={measurements.complexion} 
+                onValueChange={(val) => setMeasurements({...measurements, complexion: val})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tu complexión" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="delgada">Delgada</SelectItem>
+                  <SelectItem value="media">Media</SelectItem>
+                  <SelectItem value="atletica">Atlética</SelectItem>
+                  <SelectItem value="robusta">Robusta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSaveMeasurements} disabled={savingMeasurements} className="w-full mt-4">
+              {savingMeasurements ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Guardar Medidas
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
