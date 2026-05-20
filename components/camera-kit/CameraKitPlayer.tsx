@@ -268,33 +268,21 @@ export const CameraKitPlayer = forwardRef<CameraKitPlayerHandle, CameraKitPlayer
           console.error("[CameraKit] loadLens error", normalized)
         }
 
+        // Se asegura tener un grupo ID válido
+        const safeLensGroupId = lensGroupId || "9cb32233-4f96-4a34-bdb8-b405ffdc21a3"
+
         const loadLensFn = lensRepository.loadLens
         if (typeof loadLensFn === "function") {
-          const callLoadLens = async (useGroup: boolean) => {
-            if (useGroup && !lensGroupId) {
-              return false
+          try {
+            const result = await (loadLensFn as (...args: unknown[]) => Promise<unknown>).apply(
+              lensRepository,
+              [lensId, safeLensGroupId]
+            )
+            if (result) {
+              lens = result
             }
-            try {
-              const args = useGroup ? [lensId, lensGroupId] : [lensId]
-              const result = await (loadLensFn as (...args: unknown[]) => Promise<unknown>).apply(
-                lensRepository,
-                args
-              )
-              if (result) {
-                lens = result
-                return true
-              }
-            } catch (error) {
-              recordError(error)
-            }
-            return false
-          }
-
-          if (lensGroupId) {
-            await callLoadLens(true)
-          }
-          if (!lens) {
-            await callLoadLens(false)
+          } catch (error) {
+            recordError(error)
           }
         }
 
