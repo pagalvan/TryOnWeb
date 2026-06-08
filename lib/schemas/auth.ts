@@ -9,7 +9,7 @@ export const registerSchema = loginSchema.extend({
   nombre: z.string().min(2, "El nombre es obligatorio"),
   telefono: z
     .string()
-    .regex(/^[0-9]{7,15}$/u, "Teléfono inválido")
+    .regex(/^\+?[0-9]{7,15}$/u, "Teléfono inválido")
     .optional()
     .or(z.literal(""))
     .transform((value) => (value ? value : undefined)),
